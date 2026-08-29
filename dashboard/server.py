@@ -192,10 +192,8 @@ def phase_progress(journal):
     index = PHASES.index(current) if current in PHASES else -1
     steps = []
     for position, phase in enumerate(PHASES):
-        if finished and status != "passed" and position > index:
-            state = "skipped"
-        elif finished and status == "passed":
-            state = "done"
+        if finished:
+            state = "done" if phase in reached else "skipped"
         elif position < index or (phase in reached and position != index):
             state = "done"
         elif position == index:

@@ -86,6 +86,45 @@ def test_a_finished_run_shows_every_phase_done():
     assert {step["state"] for step in summary["steps"]} == {"done"}
 
 
+def test_a_finished_dry_run_does_not_claim_push_or_pr_completed():
+    journal = running(
+        status="passed",
+        phase="done",
+        events=[
+            {"phase": "clone"},
+            {"phase": "prepare"},
+            {"phase": "analyze"},
+            {"phase": "patch"},
+            {"phase": "test"},
+            {"phase": "diff"},
+            {"phase": "done"},
+        ],
+    )
+
+    steps = {step["phase"]: step["state"] for step in server.phase_progress(journal)}
+
+    assert steps["diff"] == "done"
+    assert steps["push"] == "skipped"
+    assert steps["pr"] == "skipped"
+    assert steps["done"] == "done"
+
+
+def test_a_terminal_failure_uses_events_not_done_phase_position():
+    journal = running(
+        status="failed",
+        phase="done",
+        events=[{"phase": "clone"}, {"phase": "test"}, {"phase": "done"}],
+    )
+
+    steps = {step["phase"]: step["state"] for step in server.phase_progress(journal)}
+
+    assert steps["clone"] == "done"
+    assert steps["patch"] == "skipped"
+    assert steps["push"] == "skipped"
+    assert steps["pr"] == "skipped"
+    assert steps["done"] == "done"
+
+
 # --------------------------------------------------------------------------
 # aggregation
 # --------------------------------------------------------------------------

@@ -10,3 +10,4 @@ htmlcov/
 artifacts/*.json
 artifacts/*.csv
 artifacts/*.png
+artifacts/runs/
