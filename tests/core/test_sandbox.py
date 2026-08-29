@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import base64
+import io
+import tarfile
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -10,6 +13,7 @@ from darwin_debugger.sandbox import (
     DaytonaSandboxManager,
     PreparedTaskSandboxes,
     SandboxError,
+    _archive_directory,
     run_command,
     upload_directory,
 )
@@ -122,6 +126,22 @@ def test_upload_directory_rejects_relative_destination(tmp_path: Path) -> None:
 
     with pytest.raises(SandboxError, match="safe absolute path"):
         upload_directory(FakeSandbox("base", []), source, "workspace/repo")
+
+
+def test_archive_excludes_large_host_only_directories(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
+    for excluded in (".git", ".venv", "node_modules", "__pycache__"):
+        directory = source / excluded
+        directory.mkdir()
+        (directory / "secret.bin").write_bytes(b"do-not-upload")
+
+    payload = base64.b64decode(_archive_directory(source))
+    with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as archive:
+        names = archive.getnames()
+
+    assert names == ["module.py"]
 
 
 def test_independent_mode_creates_and_prepares_candidate(tmp_path: Path) -> None:

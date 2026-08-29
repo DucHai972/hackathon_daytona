@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -11,7 +12,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from .contracts import BenchmarkManifest, BenchmarkTask, ContractError
+from .github import GitHubClient, GitHubError
 from .orchestrator import ExperimentOrchestrator
+from .pipeline import HostGit, IssueToPRPipeline, PipelineError
 from .provider import OpenAICompatibleProvider, ProviderError
 from .sandbox import DaytonaSandboxManager, run_command
 from .strategies import STRATEGIES, select_strategies
@@ -32,6 +35,15 @@ def _parser() -> argparse.ArgumentParser:
         default="v0_baseline,v1_test_first,v2_reflection,v3_risk_controlled",
     )
     run.add_argument("--workers", type=int, default=2)
+
+    fix = subparsers.add_parser("fix", help="repair a GitHub issue and open a pull request")
+    fix.add_argument("--repo", required=True, help="GitHub repository in owner/name form")
+    fix.add_argument("--issue", required=True, type=int, help="GitHub issue number")
+    fix.add_argument("--dry-run", action="store_true", help="stop before pushing to GitHub")
+    fix.add_argument("--strategy", default="v1_test_first")
+    fix.add_argument("--test-command", default="pytest -q")
+    fix.add_argument("--timeout", type=int, default=120)
+    fix.add_argument("--journal-dir", default="artifacts/runs")
 
     subparsers.add_parser("smoke", help="verify Daytona execution, isolation, and cleanup")
     subparsers.add_parser("strategies", help="list available reasoning strategies")
@@ -93,6 +105,34 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "smoke":
             return _smoke()
+        if args.command == "fix":
+            if args.timeout < 1:
+                raise ValueError("--timeout must be positive")
+            strategy = select_strategies([args.strategy])[0]
+            provider = OpenAICompatibleProvider.from_environment()
+            github = GitHubClient.from_environment()
+            pipeline = IssueToPRPipeline(
+                manager=DaytonaSandboxManager(),
+                provider=provider,
+                github=github,
+                git=HostGit(token=os.environ.get("GITHUB_TOKEN", "")),
+                journal_dir=args.journal_dir,
+                timeout_seconds=args.timeout,
+            )
+            result = pipeline.run(
+                repo=args.repo,
+                issue_number=args.issue,
+                strategy=strategy,
+                test_command=args.test_command,
+                model=provider.model,
+                dry_run=args.dry_run,
+            )
+            print(
+                f"status={result.status} branch={result.branch} "
+                f"journal={result.journal_path}"
+                + (f" pr={result.pull_request_url}" if result.pull_request_url else "")
+            )
+            return 0 if result.status == "passed" else 1
         manifest = BenchmarkManifest.load(args.manifest)
         if args.command == "validate":
             print(
@@ -118,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
             f"final={results.promoted_success_rate:.0%} results={args.results}"
         )
         return 0
-    except (ContractError, ProviderError, ValueError) as exc:
+    except (ContractError, GitHubError, PipelineError, ProviderError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 

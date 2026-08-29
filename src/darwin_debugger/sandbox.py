@@ -18,6 +18,8 @@ from typing import Any, Protocol
 
 from .contracts import BenchmarkTask
 
+ARCHIVE_EXCLUDES = frozenset({".git", ".venv", "node_modules", "__pycache__"})
+
 
 class SandboxError(RuntimeError):
     """Raised when sandbox preparation or lifecycle management fails."""
@@ -67,16 +69,19 @@ def _safe_name(value: str, *, limit: int = 48) -> str:
     return (cleaned or "run")[:limit]
 
 
-def _archive_directory(source: Path) -> str:
+def _archive_directory(source: Path, *, exclude: frozenset[str] = ARCHIVE_EXCLUDES) -> str:
     if not source.is_dir():
         raise SandboxError(f"upload source is not a directory: {source}")
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w:gz", dereference=False) as archive:
         for path in sorted(source.rglob("*")):
+            relative = path.relative_to(source)
+            if any(part in exclude for part in relative.parts):
+                continue
             if path.is_symlink():
                 raise SandboxError(f"refusing to upload symbolic link: {path}")
             if path.is_file():
-                archive.add(path, arcname=path.relative_to(source).as_posix(), recursive=False)
+                archive.add(path, arcname=relative.as_posix(), recursive=False)
     return base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
@@ -241,7 +246,7 @@ class DaytonaSandboxManager:
         snapshot_name: str | None = None
         try:
             base = self.client.create(params, timeout=self.lifecycle_timeout)
-            self._prepare_filesystem(base, task)
+            self._prepare_filesystem(base, task.repo_path, task.timeout_seconds)
             if self.clone_mode == "snapshot":
                 snapshot_name = _safe_name(f"dd-{task.id}-{unique}-snapshot", limit=60)
                 base.create_snapshot(snapshot_name, timeout=max(self.lifecycle_timeout, 120))
@@ -284,7 +289,7 @@ class DaytonaSandboxManager:
                 ),
                 timeout=self.lifecycle_timeout,
             )
-            self._prepare_filesystem(sandbox, task)
+            self._prepare_filesystem(sandbox, task.repo_path, task.timeout_seconds)
             return sandbox
         except Exception:
             if sandbox is not None:
@@ -292,8 +297,29 @@ class DaytonaSandboxManager:
                     sandbox.delete(timeout=self.lifecycle_timeout, wait=True)
             raise
 
-    def _prepare_filesystem(self, sandbox: SandboxLike, task: BenchmarkTask) -> None:
-        upload_directory(sandbox, task.repo_path, "/workspace/repo", timeout=task.timeout_seconds)
+    def create_product_sandbox(self, *, name: str, repo: str, issue_number: int) -> SandboxLike:
+        """Create an empty product sandbox; the caller owns deletion in a finally block."""
+        try:
+            from daytona import CreateSandboxFromImageParams
+        except ImportError as exc:
+            raise SandboxError("Daytona SDK is not installed") from exc
+        return self.client.create(
+            CreateSandboxFromImageParams(
+                image=self.base_image,
+                name=_safe_name(name),
+                labels={
+                    "project": "darwin-debugger",
+                    "repo": _safe_name(repo),
+                    "issue": str(issue_number),
+                    "role": "issue-repair",
+                },
+                auto_delete_interval=self.auto_delete_minutes,
+            ),
+            timeout=self.lifecycle_timeout,
+        )
+
+    def _prepare_filesystem(self, sandbox: SandboxLike, source_dir: Path, timeout: int) -> None:
+        upload_directory(sandbox, source_dir, "/workspace/repo", timeout=timeout)
         install = run_command(
             sandbox,
             (
@@ -302,7 +328,7 @@ class DaytonaSandboxManager:
                 "python3 -m pip install -q -r requirements.txt; fi"
             ),
             cwd="/workspace/repo",
-            timeout=max(task.timeout_seconds, 120),
+            timeout=max(timeout, 120),
         )
         if install.exit_code != 0:
             raise SandboxError(f"dependency installation failed: {install.output[-1500:]}")

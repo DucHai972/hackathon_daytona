@@ -16,19 +16,65 @@ class ProviderError(RuntimeError):
     """Raised when the model provider fails or returns an invalid proposal."""
 
 
-def _sanitize_error_detail(detail: str) -> str:
+def _sanitize_error_detail(detail: str, *, secrets: tuple[str, ...] = ()) -> str:
+    for secret in secrets:
+        if secret:
+            detail = detail.replace(secret, "[credential]")
     sanitized = re.sub(r"https?://\S+", "[url]", detail)
     sanitized = re.sub(
         r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b",
         "[id]",
         sanitized,
     )
-    sanitized = re.sub(r"\b(?:sk|xai)-[A-Za-z0-9_-]{12,}\b", "[credential]", sanitized)
+    sanitized = re.sub(
+        r"\b(?:sk|xai)-[A-Za-z0-9_-]{12,}\b|\b(?:github_pat_|gh[pousr]_)[A-Za-z0-9_]{12,}\b|\bAIza[A-Za-z0-9_-]{20,}\b",
+        "[credential]",
+        sanitized,
+    )
+    sanitized = re.sub(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]{8,}", "Bearer [credential]", sanitized)
     return " ".join(sanitized.split())[-500:]
 
 
 class ModelProvider(Protocol):
-    def complete(self, *, system: str, user: str) -> str: ...
+    def complete(self, *, system: str, user: str) -> tuple[str, TokenUsage]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class TokenUsage:
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+
+    def __add__(self, other: TokenUsage) -> TokenUsage:
+        return TokenUsage(
+            prompt_tokens=self.prompt_tokens + other.prompt_tokens,
+            completion_tokens=self.completion_tokens + other.completion_tokens,
+            total_tokens=self.total_tokens + other.total_tokens,
+        )
+
+    def to_journal(self, *, calls: int = 1) -> dict[str, int]:
+        return {
+            "prompt": self.prompt_tokens,
+            "completion": self.completion_tokens,
+            "total": self.total_tokens,
+            "calls": calls,
+        }
+
+    @classmethod
+    def from_payload(cls, payload: object) -> TokenUsage:
+        usage = payload if isinstance(payload, dict) else {}
+
+        def count(name: str) -> int:
+            value = usage.get(name, 0)
+            valid = isinstance(value, int) and not isinstance(value, bool) and value >= 0
+            return value if valid else 0
+
+        prompt = count("prompt_tokens")
+        completion = count("completion_tokens")
+        total = count("total_tokens")
+        if total == 0 and (prompt or completion):
+            total = prompt + completion
+        return cls(prompt_tokens=prompt, completion_tokens=completion, total_tokens=total)
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,7 +166,7 @@ class OpenAICompatibleProvider:
             max_completion_tokens=int(os.environ.get("MODEL_MAX_COMPLETION_TOKENS", "4096")),
         )
 
-    def complete(self, *, system: str, user: str) -> str:
+    def complete(self, *, system: str, user: str) -> tuple[str, TokenUsage]:
         body = json.dumps(
             {
                 "model": self.model,
@@ -149,11 +195,15 @@ class OpenAICompatibleProvider:
         except urllib.error.HTTPError as exc:
             detail = exc.read(1000).decode("utf-8", errors="replace")
             raise ProviderError(
-                f"model API returned HTTP {exc.code}: {_sanitize_error_detail(detail)}"
+                f"model API returned HTTP {exc.code}: "
+                f"{_sanitize_error_detail(detail, secrets=(self.api_key,))}"
             ) from exc
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             raise ProviderError(f"model API request failed: {exc}") from exc
         try:
-            return payload["choices"][0]["message"]["content"]
+            content = payload["choices"][0]["message"]["content"]
+            if not isinstance(content, str):
+                raise TypeError("message content is not text")
+            return content, TokenUsage.from_payload(payload.get("usage"))
         except (KeyError, IndexError, TypeError) as exc:
             raise ProviderError("model API response did not contain message content") from exc

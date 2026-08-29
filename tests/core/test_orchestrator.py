@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from darwin_debugger.agent import AgentOutcome
 from darwin_debugger.contracts import BenchmarkManifest, BenchmarkTask
 from darwin_debugger.orchestrator import ExperimentOrchestrator
+from darwin_debugger.provider import TokenUsage
 from darwin_debugger.sandbox import CommandResult
 from darwin_debugger.strategies import STRATEGIES
 
@@ -49,7 +50,7 @@ class FakeManager:
 
 
 class FakeProvider:
-    def complete(self, *, system: str, user: str) -> str:
+    def complete(self, *, system: str, user: str) -> tuple[str, TokenUsage]:
         raise AssertionError("RepairAgent is stubbed in this test")
 
 
