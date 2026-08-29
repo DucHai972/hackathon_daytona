@@ -103,7 +103,11 @@ def test_agent_visible_files_do_not_leak_hidden_assertions(task):
                 hidden_lines.add(stripped)
 
     visible = [REPO_ROOT / task["issue_path"]]
-    visible += [p for p in (REPO_ROOT / task["repo_path"]).rglob("*") if p.is_file()]
+    visible += [
+        path
+        for path in (REPO_ROOT / task["repo_path"]).rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts
+    ]
 
     for path in visible:
         text = path.read_text(encoding="utf-8")

@@ -311,6 +311,6 @@ class DaytonaSandboxManager:
         upload_directory(
             sandbox,
             task.hidden_tests_path,
-            "/workspace/repo/_darwin_hidden_tests",
+            "/workspace/repo",
             timeout=task.timeout_seconds,
         )

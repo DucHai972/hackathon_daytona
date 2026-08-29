@@ -138,3 +138,19 @@ def test_independent_mode_creates_and_prepares_candidate(tmp_path: Path) -> None
     assert len(client.created) == 1
     assert len(sandbox.process.calls) == 2
     assert events[-1] == f"delete:{sandbox.id}"
+
+
+def test_hidden_tests_are_injected_next_to_repo_files(tmp_path: Path, monkeypatch) -> None:
+    from darwin_debugger import sandbox as module
+
+    calls: list[tuple[Path, str, int]] = []
+
+    def capture_upload(sandbox, source, destination, *, timeout=60):
+        calls.append((source, destination, timeout))
+
+    monkeypatch.setattr(module, "upload_directory", capture_upload)
+    task = _task(tmp_path)
+
+    DaytonaSandboxManager(client=object()).inject_hidden_tests(FakeSandbox("candidate", []), task)
+
+    assert calls == [(task.hidden_tests_path, "/workspace/repo", 60)]

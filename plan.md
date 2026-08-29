@@ -2,7 +2,7 @@
 
 ## One-sentence product
 
-Darwin Debugger is a self-improving coding agent that forks a prepared Daytona sandbox for each repair strategy, lets the variants independently fix the same repository bug, scores every patch with deterministic tests, learns from the failures, and promotes the best strategy.
+Darwin Debugger creates an isolated Daytona sandbox for each repair strategy, lets the variants independently fix the same repository bug, scores every patch with deterministic tests, and promotes the strongest strategy on a frozen development benchmark before comparing it with the baseline on held-out tasks.
 
 ## The winning claim
 
@@ -17,7 +17,7 @@ Do not claim improvement until the recorded experiment supports it. Preserve fai
 | Criterion | What judges will see |
 | --- | --- |
 | Agent reasoning | Distinct strategies, failure reflection, and a clear explanation of why the winning strategy changed. |
-| Sandbox usage | A prepared base sandbox forked into independent branches; generated patches and tests never run locally. |
+| Sandbox usage | Independent sandboxes start from the same pinned image and task archive; generated patches and tests never run locally. VM forking is an optional optimization when the account and region support it. |
 | Real-world usefulness | A practical repository repair workflow driven by issues and unit tests. |
 | Demo impact | A visible sandbox race, passing tests, a leaderboard, and a baseline-to-final improvement chart. |
 
@@ -28,7 +28,7 @@ Do not claim improvement until the recorded experiment supports it. Preserve fai
 - A small repository benchmark containing 6-10 independently runnable bug-fix tasks.
 - A baseline coding-agent prompt/configuration.
 - Three to five deliberately different candidate strategies.
-- One Daytona base sandbox or snapshot, forked once per candidate run.
+- One isolated Daytona candidate per strategy run, created from an identical image and task archive.
 - Parallel execution with strict timeouts.
 - Deterministic test-based scoring.
 - Structured run logs and a results file.
@@ -94,9 +94,9 @@ After a failed test run, provide the failure output and require the agent to cla
 
 Require a plan, minimal diff, full regression test, and a final check for edge cases and unintended API changes.
 
-### V4: automatically synthesized strategy
+### V4: synthesized best-practices strategy
 
-Summarize failure patterns from V0-V3 and ask an optimizer step to produce one new strategy. Keep the generated prompt and explanation in the experiment log.
+The shipped fallback combines test-first localization, failure classification, minimal edits, and a final regression audit in a fixed, reviewable prompt. If time and model access permit, replace it with one optimizer-generated strategy based only on V0-V3 development failures, and preserve the generated prompt and rationale in the experiment log.
 
 If time is tight, ship V0-V2 first. Three complete variants beat five unfinished ones.
 
@@ -133,9 +133,9 @@ Also record:
 ```text
 Issue + repository + fixed benchmark split
                     |
-          prepared Daytona sandbox
+       identical task archive + image
                     |
-       fork into isolated candidates
+      create isolated Daytona candidates
         /           |            \
    baseline     test-first     reflection     ...
         \           |            /
@@ -143,7 +143,7 @@ Issue + repository + fixed benchmark split
                     |
         results.json + leaderboard
                     |
-       failure-analysis optimizer
+     development-set promotion rule
                     |
              promoted strategy
                     |
@@ -343,7 +343,7 @@ Claude then pushes `claude/benchmark-demo` and stops editing until Codex complet
 Codex owns the runtime and integration layer:
 
 1. Create root project configuration and dependency setup.
-2. Implement Daytona sandbox creation, preparation, forking, labeling, command execution, timeouts, and cleanup in `src/**`.
+2. Implement Daytona sandbox creation, preparation, optional cloning/forking, labeling, command execution, timeouts, and cleanup in `src/**`.
 3. Implement the model adapter and bounded coding-agent tool loop.
 4. Implement V0-V4 strategy definitions and failure-reflection logic.
 5. Read Claude's benchmark manifest through the frozen contract without special-casing task IDs.
@@ -390,7 +390,7 @@ Joint review begins only after both delivery reports exist and the integrated pr
 #### Final joint gate
 
 - All benchmark and core tests pass from a clean checkout.
-- The Daytona smoke test, fork-isolation test, and cleanup test pass.
+- The Daytona smoke test, candidate-isolation test, and cleanup test pass.
 - V0 and the promoted strategy run under identical budgets on the frozen held-out split.
 - The real results file validates against the frozen contract.
 - Claude's demo reads the real results without code changes.
@@ -409,14 +409,14 @@ Only after this gate passes should `integration/final` be merged into `main` for
 1. Redeem credits and verify the account/API key.
 2. Run the smallest Daytona hello-world call.
 3. Create a sandbox, execute a command, capture output, and delete it.
-4. Confirm two forks have independent filesystems.
+4. Confirm two candidates have independent filesystems.
 
 Stop gate: do not build agent logic until sandbox creation, execution, and cleanup work.
 
 ### Phase 2 — build the evaluator, 35 minutes
 
 1. Codex creates temporary evaluator fixtures only under `tests/core/**`; Codex does not edit Claude-owned `benchmark/**`.
-2. Codex implements sandbox reset/fork and test execution against the frozen benchmark contract.
+2. Codex implements sandbox preparation/isolation and test execution against the frozen benchmark contract.
 3. Codex returns a structured result with status, test counts, runtime, and logs.
 4. Codex runs a known good patch and known bad patch through the temporary fixtures to validate the scorer.
 
@@ -436,7 +436,7 @@ Stop gate: preserve the first honest baseline. Do not quietly redefine the bench
 ### Phase 4 — parallel strategy race, 50 minutes
 
 1. Add V1-V3 prompts.
-2. Fork the prepared sandbox per task and strategy.
+2. Create an isolated candidate per task and strategy from the same starting state.
 3. Execute a small concurrency batch first, then scale only if stable.
 4. Store every prompt, patch, test result, error, and duration.
 5. Generate the initial leaderboard.
@@ -446,7 +446,7 @@ Stop gate: if concurrency is unreliable, reduce the worker count; keep the multi
 ### Phase 5 — improvement loop, 35 minutes
 
 1. Group failures into categories such as poor localization, incorrect hypothesis, regression, timeout, or incomplete edge-case handling.
-2. Ask the optimizer to propose V4 using only development-set evidence.
+2. If model access and time permit, ask the optimizer to propose V4 using only development-set evidence; otherwise use the documented static V4 fallback.
 3. Record its rationale and exact resulting strategy.
 4. Run V4 once across the development set.
 5. Promote the best strategy using the predefined metric.
@@ -502,7 +502,7 @@ Avoid scrolling through source code. The visual story is a race followed by proo
 
 ### 0:20-0:45 — solution
 
-"Darwin Debugger forks an identical Daytona sandbox for each reasoning strategy. Every candidate independently repairs the issue, runs tests in isolation, and receives a deterministic score."
+"Darwin Debugger creates an identical isolated Daytona sandbox for each reasoning strategy. Every candidate independently repairs the issue, runs tests in isolation, and receives a deterministic score."
 
 ### 0:45-1:35 — live proof
 
@@ -514,7 +514,7 @@ Show the development and held-out results. State the baseline and final success 
 
 ### 2:10-2:40 — why Daytona
 
-"This is not a wrapper around Daytona. Fast forks are what make fair parallel comparison safe and practical: identical starting state, independent execution, reproducible failures, and disposable compute."
+"This is not a wrapper around Daytona. Isolated, disposable sandboxes make fair parallel comparison safe and practical: identical starting state, independent execution, and reproducible failures. VM forking can make that faster when the account and region support it, but the experiment does not depend on it."
 
 ### 2:40-3:00 — close
 
@@ -549,4 +549,4 @@ The project is demo-ready only when all of these are true:
 
 ## Immediate next action
 
-Build the Daytona smoke test and sandbox-fork proof first. Once they work, create three benchmark bugs and the deterministic scorer before connecting any model.
+The smoke test, benchmark, scorer, runtime, and demo are integrated. Configure `MODEL_API_KEY` and `MODEL_NAME`, run the frozen development/held-out experiment, then replace every pitch placeholder only with the recorded result.

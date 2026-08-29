@@ -48,7 +48,7 @@ BOLD = "\033[1m"
 PROBLEM = (
     "Coding agents are inconsistent, and running their generated code on a "
     "laptop is risky.\nDarwin Debugger races reasoning strategies in isolated "
-    "Daytona forks and scores them\non deterministic tests."
+    "Daytona sandboxes and scores them\non deterministic tests."
 )
 
 
@@ -249,14 +249,27 @@ def header_lines(data, runs, skipped, source):
         ),
         rule(),
         "",
-        PROBLEM,
-        "",
-        f"results   : {source}",
-        f"run id    : {data.get('run_id', '(not recorded)')}",
-        f"tasks     : {len(tasks)}",
-        f"strategies: {len(strategies)}",
-        f"runs      : {len(runs)}",
     ]
+    note = data.get("note")
+    if isinstance(note, str) and "sample" in note.lower():
+        lines.extend(
+            [
+                "*** SAMPLE DATA — NOT AN EXPERIMENT RESULT ***".center(WIDTH),
+                note.center(WIDTH),
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            PROBLEM,
+            "",
+            f"results   : {source}",
+            f"run id    : {data.get('run_id', '(not recorded)')}",
+            f"tasks     : {len(tasks)}",
+            f"strategies: {len(strategies)}",
+            f"runs      : {len(runs)}",
+        ]
+    )
     if skipped:
         lines.append(f"skipped   : {skipped} malformed run record(s) ignored")
     return lines

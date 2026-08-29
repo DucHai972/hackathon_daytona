@@ -25,7 +25,7 @@ sample fixture as an experiment result.
 
 ## 0:20–0:45 — solution
 
-> "Darwin Debugger forks one prepared Daytona sandbox per reasoning strategy.
+> "Darwin Debugger creates one isolated Daytona sandbox per reasoning strategy.
 > Every candidate independently repairs the same issue, runs the tests in its
 > own isolated filesystem, and gets a deterministic score. Nothing generated
 > ever runs here."
@@ -56,8 +56,9 @@ python demo/demo.py            # or: --results artifacts/results.json
 > split we never tuned against. Same model, same tasks, same step and time
 > budget — the only variable is the strategy.
 >
-> The baseline's dominant failure was `<FAILMODE>`. That is exactly what the
-> optimizer read, and it is why the promoted strategy changed the way it did."
+> The baseline's dominant failure was `<FAILMODE>`. Our strategy variants target
+> failure modes like this, and the development benchmark selected the one that
+> transferred best to this held-out comparison."
 
 If the improvement did not transfer to held-out, say so in that sentence and
 show the development-set result instead. An honest negative is a better answer
@@ -65,10 +66,11 @@ than a number nobody can reproduce.
 
 ## 2:10–2:40 — why Daytona
 
-> "This is not a wrapper. Fast forks are the mechanism: identical starting
-> state, genuinely independent execution, reproducible failures, disposable
-> compute. Without that, parallel strategy comparison is either unsafe or
-> unfair — and you cannot do a hundred of them on a laptop."
+> "This is not a wrapper. Isolated Daytona sandboxes are the mechanism: identical
+> starting state, genuinely independent execution, reproducible failures, and
+> disposable compute. When VM forking is available we can use it as an
+> optimization, but the comparison does not depend on that claim. Without
+> isolation, parallel strategy comparison is either unsafe or unfair."
 
 ## 2:40–3:00 — close
 
@@ -94,10 +96,12 @@ sample data if it ever appears on screen.
 ## Anticipated questions
 
 - **"Did you tune on the held-out tasks?"** No. The split is fixed in
-  `benchmark/tasks.json` and the optimizer only ever saw development-set
-  failures.
+  `benchmark/tasks.json`. All strategies run on the development split; only
+  the baseline and development winner are evaluated on the held-out split.
 - **"How do you know the patch is right and not test-shaped?"** Hidden tests
   are copied in only after the agent stops editing, so it never sees the
   assertions it is scored on.
-- **"How many runs?"** `<NTASKS>` tasks × `<NSTRAT>` strategies, one attempt
-  each, all recorded in `artifacts/results.json` including the failures.
+- **"How many runs?"** Six development tasks × `<NSTRAT>` strategies, then two
+  held-out tasks × the baseline and development winner. Each candidate has up
+  to three bounded repair attempts; every candidate result, including failures,
+  is recorded in `artifacts/results.json`.

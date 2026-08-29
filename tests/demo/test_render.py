@@ -73,6 +73,7 @@ def test_leaderboard_is_ranked_best_first():
 def test_sample_renders_completely():
     code, text = render_to_string(demo.load_results(SAMPLE), source=SAMPLE)
     assert code == 0
+    assert "SAMPLE DATA" in text and "NOT AN EXPERIMENT RESULT" in text
     assert "STRATEGY RACE" in text and "REPLAY" in text
     assert "LEADERBOARD" in text
     assert "MEASURED IMPROVEMENT" in text

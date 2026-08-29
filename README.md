@@ -1,6 +1,6 @@
 # Darwin Debugger
 
-Darwin Debugger compares coding-agent reasoning strategies in independent Daytona sandbox forks,
+Darwin Debugger compares coding-agent reasoning strategies in independent Daytona sandboxes,
 scores their repository patches with deterministic tests, and promotes the best strategy to an
 untouched held-out benchmark.
 
@@ -47,7 +47,7 @@ use `snapshot` only with a key that can delete snapshots.
 # Offline contract validation after Claude's benchmark is integrated
 darwin-debugger validate --manifest benchmark/tasks.json
 
-# Low-cost Daytona execution/fork/cleanup check
+# Low-cost Daytona execution/isolation/cleanup check
 darwin-debugger smoke
 
 # Controlled experiment
