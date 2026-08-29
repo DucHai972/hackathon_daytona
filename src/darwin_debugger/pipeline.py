@@ -243,6 +243,8 @@ class IssueToPRPipeline:
                 self.manager._prepare_filesystem(sandbox, repository, self.timeout_seconds)
                 baseline = run_command(
                     sandbox,
+                    "if ! command -v git >/dev/null 2>&1; then "
+                    "apt-get update -qq && apt-get install -y -qq git; fi && "
                     "git init -q && git config user.name 'Darwin Debugger' && "
                     "git config user.email 'darwin-debugger@users.noreply.github.com' && "
                     "git add -A && git commit -qm 'Darwin baseline'",

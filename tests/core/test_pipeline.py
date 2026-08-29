@@ -136,7 +136,13 @@ def test_dry_run_writes_journal_and_never_pushes(tmp_path: Path, monkeypatch) ->
         ]
     )
     monkeypatch.setattr(module, "RepairAgent", StubAgent)
-    monkeypatch.setattr(module, "run_command", lambda *args, **kwargs: next(calls))
+    commands = []
+
+    def fake_run_command(sandbox, command, **kwargs):
+        commands.append(command)
+        return next(calls)
+
+    monkeypatch.setattr(module, "run_command", fake_run_command)
     pipeline = IssueToPRPipeline(
         manager=manager,
         provider=SimpleNamespace(),
@@ -160,6 +166,7 @@ def test_dry_run_writes_journal_and_never_pushes(tmp_path: Path, monkeypatch) ->
     assert manager.sandbox.deleted
     assert git.applied
     assert not git.pushed
+    assert "apt-get install -y -qq git" in commands[0]
     assert payload["tokens"]["total"] == 12
     assert payload["tests"]["passed"] == 2
     assert payload["patch"]["files"] == ["module.py"]
