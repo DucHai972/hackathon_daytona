@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "tasks": [
+    {
+      "id": "bug_01",
+      "split": "development",
+      "issue_path": "benchmark/tasks/bug_01/issue.md",
+      "repo_path": "benchmark/tasks/bug_01/repo",
+      "hidden_tests_path": "benchmark/hidden_tests/bug_01",
+      "public_test_command": "pytest -q",
+      "hidden_test_command": "pytest -q",
+      "timeout_seconds": 60
+    },
+    {
+      "id": "bug_02",
+      "split": "development",
+      "issue_path": "benchmark/tasks/bug_02/issue.md",
+      "repo_path": "benchmark/tasks/bug_02/repo",
+      "hidden_tests_path": "benchmark/hidden_tests/bug_02",
+      "public_test_command": "pytest -q",
+      "hidden_test_command": "pytest -q",
+      "timeout_seconds": 60
+    },
+    {
+      "id": "bug_03",
+      "split": "development",
+      "issue_path": "benchmark/tasks/bug_03/issue.md",
+      "repo_path": "benchmark/tasks/bug_03/repo",
+      "hidden_tests_path": "benchmark/hidden_tests/bug_03",
+      "public_test_command": "pytest -q",
+      "hidden_test_command": "pytest -q",
+      "timeout_seconds": 60
+    },
+    {
+      "id": "bug_04",
+      "split": "development",
+      "issue_path": "benchmark/tasks/bug_04/issue.md",
+      "repo_path": "benchmark/tasks/bug_04/repo",
+      "hidden_tests_path": "benchmark/hidden_tests/bug_04",
+      "public_test_command": "pytest -q",
+      "hidden_test_command": "pytest -q",
+      "timeout_seconds": 60
+    },
+    {
+      "id": "bug_05",
+      "split": "development",
+      "issue_path": "benchmark/tasks/bug_05/issue.md",
+      "repo_path": "benchmark/tasks/bug_05/repo",
+      "hidden_tests_path": "benchmark/hidden_tests/bug_05",
+      "public_test_command": "pytest -q",
+      "hidden_test_command": "pytest -q",
+      "timeout_seconds": 60
+    },
+    {
+      "id": "bug_06",
+      "split": "development",
+      "issue_path": "benchmark/tasks/bug_06/issue.md",
+      "repo_path": "benchmark/tasks/bug_06/repo",
+      "hidden_tests_path": "benchmark/hidden_tests/bug_06",
+      "public_test_command": "pytest -q",
+      "hidden_test_command": "pytest -q",
+      "timeout_seconds": 60
+    },
+    {
+      "id": "bug_07",
+      "split": "held_out",
+      "issue_path": "benchmark/tasks/bug_07/issue.md",
+      "repo_path": "benchmark/tasks/bug_07/repo",
+      "hidden_tests_path": "benchmark/hidden_tests/bug_07",
+      "public_test_command": "pytest -q",
+      "hidden_test_command": "pytest -q",
+      "timeout_seconds": 60
+    },
+    {
+      "id": "bug_08",
+      "split": "held_out",
+      "issue_path": "benchmark/tasks/bug_08/issue.md",
+      "repo_path": "benchmark/tasks/bug_08/repo",
+      "hidden_tests_path": "benchmark/hidden_tests/bug_08",
+      "public_test_command": "pytest -q",
+      "hidden_test_command": "pytest -q",
+      "timeout_seconds": 60
+    }
+  ]
+}

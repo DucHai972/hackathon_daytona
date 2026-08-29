@@ -81,7 +81,7 @@ Daytona should be essential to the experiment rather than included as a superfic
 
 ## Agreed strategic direction
 
-Build a self-improving coding agent evaluated on deterministic repository tests. Run several agent strategies in parallel Daytona forks, score their patches, analyze failures, promote the strongest strategy, and demonstrate a measurable improvement on held-out tasks.
+Build a self-improving coding agent evaluated on deterministic repository tests. Run several agent strategies in parallel isolated Daytona sandboxes with identical starting state, score their patches, analyze failures, promote the strongest strategy, and demonstrate a measurable improvement on held-out tasks. Use VM forking as an optional acceleration only where the account and region support it.
 
 Working title: **Darwin Debugger**.
 
