@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Live transparency dashboard for Darwin Debugger runs.
+"""Live transparency dashboard for AutoResolve runs.
 
 Serves one page that polls the run journal written by the pipeline
 (`artifacts/runs/<run_id>.json`, the contract frozen in `plan.md`) and shows
@@ -275,7 +275,7 @@ def run_index(journals):
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
-    server_version = "DarwinDashboard/0.1"
+    server_version = "AutoResolveDashboard/0.1"
     runs_dir = DEFAULT_RUNS_DIR
     replay_path = None
     quiet = True
@@ -334,7 +334,7 @@ def serve(*, port, runs_dir, replay_path=None, verbose=False):
     DashboardHandler.quiet = not verbose
     httpd = ThreadingHTTPServer(("127.0.0.1", port), DashboardHandler)
     source = replay_path if replay_path else f"{runs_dir}/*.json"
-    print(f"Darwin Debugger dashboard on http://127.0.0.1:{port}  (reading {source})")
+    print(f"AutoResolve dashboard on http://127.0.0.1:{port}  (reading {source})")
     print("Ctrl-C to stop.")
     try:
         httpd.serve_forever()
@@ -346,7 +346,7 @@ def serve(*, port, runs_dir, replay_path=None, verbose=False):
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(description="Darwin Debugger live dashboard.")
+    parser = argparse.ArgumentParser(description="AutoResolve live dashboard.")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument(
         "--runs-dir",

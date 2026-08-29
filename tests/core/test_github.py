@@ -6,7 +6,7 @@ import urllib.error
 
 import pytest
 
-from darwin_debugger.github import GitHubClient, GitHubError
+from autoresolve.github import GitHubClient, GitHubError
 
 
 class FakeResponse(io.BytesIO):
@@ -38,7 +38,7 @@ def test_fetch_issue_and_open_pull_request_use_rest_contract() -> None:
 
     issue = client.fetch_issue("acme/widgets", 7)
     pull_url = client.open_pull_request(
-        "acme/widgets", "darwin/issue-7", "main", "Fix #7", "Fixes #7"
+        "acme/widgets", "autoresolve/issue-7", "main", "Fix #7", "Fixes #7"
     )
 
     assert issue.title == "Fix totals"
@@ -47,7 +47,7 @@ def test_fetch_issue_and_open_pull_request_use_rest_contract() -> None:
     assert calls[0][0].method == "GET"
     assert calls[1][0].method == "POST"
     assert json.loads(calls[1][0].data) == {
-        "head": "darwin/issue-7",
+        "head": "autoresolve/issue-7",
         "base": "main",
         "title": "Fix #7",
         "body": "Fixes #7",

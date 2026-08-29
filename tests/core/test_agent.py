@@ -4,11 +4,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from darwin_debugger import agent as module
-from darwin_debugger.agent import RepairAgent, _write_replacement
-from darwin_debugger.provider import ProviderError, TokenUsage
-from darwin_debugger.sandbox import CommandResult
-from darwin_debugger.strategies import STRATEGIES
+from autoresolve import agent as module
+from autoresolve.agent import RepairAgent, _write_replacement
+from autoresolve.provider import ProviderError, TokenUsage
+from autoresolve.sandbox import CommandResult
+from autoresolve.strategies import STRATEGIES
 
 
 class FakeProvider:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Darwin Debugger demo renderer.
+"""AutoResolve demo renderer.
 
 Reads a results file written against the frozen results contract in `plan.md`
 and renders the story: the strategy race, the leaderboard, and the honest
@@ -47,7 +47,7 @@ BOLD = "\033[1m"
 
 PROBLEM = (
     "Coding agents are inconsistent, and running their generated code on a "
-    "laptop is risky.\nDarwin Debugger races reasoning strategies in isolated "
+    "laptop is risky.\nAutoResolve races reasoning strategies in isolated "
     "Daytona sandboxes and scores them\non deterministic tests."
 )
 
@@ -243,7 +243,7 @@ def header_lines(data, runs, skipped, source):
     strategies = sorted({run["strategy_id"] for run in runs})
     lines = [
         rule(),
-        "DARWIN DEBUGGER".center(WIDTH),
+        "AUTORESOLVE".center(WIDTH),
         "self-improving coding agent, evolved in isolated Daytona sandboxes".center(
             WIDTH
         ),
@@ -415,7 +415,7 @@ def render(data, source, colour=True, replay_delay=0.0, out=sys.stdout):
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(description="Render the Darwin Debugger demo.")
+    parser = argparse.ArgumentParser(description="Render the AutoResolve demo.")
     parser.add_argument(
         "--results",
         default=None,

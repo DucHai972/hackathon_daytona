@@ -53,7 +53,7 @@ import json
 from pathlib import Path
 
 root = Path('.')
-skip_parts = {'.git', '.pytest_cache', '__pycache__', '.venv', '_darwin_hidden_tests'}
+skip_parts = {'.git', '.pytest_cache', '__pycache__', '.venv', '_autoresolve_hidden_tests'}
 result = {}
 total = 0
 for path in sorted(root.rglob('*')):
@@ -98,7 +98,7 @@ def _write_replacement(
     pure = PurePosixPath(path)
     if pure.is_absolute() or ".." in pure.parts or not pure.parts:
         raise ProviderError(f"unsafe replacement path: {path}")
-    protected_parts = {".git", ".venv", "tests", "test", "_darwin_hidden_tests"}
+    protected_parts = {".git", ".venv", "tests", "test", "_autoresolve_hidden_tests"}
     if protected_parts.intersection(part.lower() for part in pure.parts) or pure.name.startswith(
         "test_"
     ):

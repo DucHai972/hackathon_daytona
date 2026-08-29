@@ -14,7 +14,7 @@ pitch, and the complete branch diff before merging it with the Codex runtime.
 ## Findings resolved during integration
 
 1. **High — hidden-test materialization contract mismatch.** The runtime uploaded hidden tests to
-   `/workspace/repo/_darwin_hidden_tests`, while the benchmark requires their contents beside the
+   `/workspace/repo/_autoresolve_hidden_tests`, while the benchmark requires their contents beside the
    task modules in `/workspace/repo`. The runtime now uses the benchmark's flat layout, with a core
    regression test for the exact destination.
 2. **Medium — demo and pitch overstated VM forking.** The verified event-account path uses
@@ -44,10 +44,10 @@ pytest tests -q                                      PASS (142 tests)
 pytest tests -q                                      PASS again, warm workspace
 ruff check src tests/core tests/integration          PASS
 ruff format --check src tests/core tests/integration PASS
-darwin-debugger validate --manifest benchmark/tasks.json
+autoresolve validate --manifest benchmark/tasks.json
                                                      PASS (8 tasks: 6 development, 2 held-out)
 python demo/demo.py --sample --no-color              PASS, visible sample warning
-darwin-debugger smoke                                PASS, live Daytona execution,
+autoresolve smoke                                    PASS, live Daytona execution,
                                                      isolation, and cleanup
 git diff --check                                     PASS
 tracked-file/history secret checks                   PASS; no tracked `.env`

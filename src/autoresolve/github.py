@@ -110,7 +110,7 @@ class GitHubClient:
                 "Accept": "application/vnd.github+json",
                 "Authorization": f"Bearer {self._token}",
                 "Content-Type": "application/json",
-                "User-Agent": "darwin-debugger/0.1",
+                "User-Agent": "autoresolve/0.1",
                 "X-GitHub-Api-Version": "2022-11-28",
             },
             method=method,

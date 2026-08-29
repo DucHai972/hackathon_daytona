@@ -2,7 +2,7 @@
 """Write a run journal phase by phase, the way the pipeline will.
 
 This is a **rehearsal tool**, not a pipeline. It exists so the live dashboard
-can be exercised and demoed before `darwin-debugger fix` lands, and so the
+can be exercised and demoed before `autoresolve fix` lands, and so the
 frozen journal contract has a second independent writer proving it is
 implementable.
 

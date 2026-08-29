@@ -185,7 +185,7 @@ class OpenAICompatibleProvider:
             headers={
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": "darwin-debugger/0.1",
+                "User-Agent": "autoresolve/0.1",
             },
             method="POST",
         )

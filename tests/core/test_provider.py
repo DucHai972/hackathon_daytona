@@ -6,7 +6,7 @@ import urllib.error
 
 import pytest
 
-from darwin_debugger.provider import (
+from autoresolve.provider import (
     OpenAICompatibleProvider,
     PatchProposal,
     ProviderError,

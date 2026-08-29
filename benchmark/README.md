@@ -1,4 +1,4 @@
-# Darwin Debugger benchmark
+# AutoResolve benchmark
 
 Eight deterministic Python repair tasks. No network, no secrets, no dependency
 on `src/**`. Every suite runs in well under a second.

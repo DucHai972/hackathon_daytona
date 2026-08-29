@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from darwin_debugger.contracts import (
+from autoresolve.contracts import (
     BenchmarkManifest,
     ContractError,
     ExperimentResults,

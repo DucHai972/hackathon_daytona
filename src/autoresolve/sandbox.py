@@ -131,7 +131,7 @@ class PreparedTaskSandboxes(AbstractContextManager["PreparedTaskSandboxes"]):
                     snapshot=self.snapshot_name,
                     name=name,
                     labels={
-                        "project": "darwin-debugger",
+                        "project": "autoresolve",
                         "task": self.task.id,
                         "strategy": strategy_id,
                         "role": "candidate",
@@ -148,7 +148,7 @@ class PreparedTaskSandboxes(AbstractContextManager["PreparedTaskSandboxes"]):
         with suppress(Exception):
             child.set_labels(
                 {
-                    "project": "darwin-debugger",
+                    "project": "autoresolve",
                     "task": self.task.id,
                     "strategy": strategy_id,
                     "role": "candidate",
@@ -235,7 +235,7 @@ class DaytonaSandboxManager:
             ) from exc
         common = {
             "name": _safe_name(f"dd-{task.id}-{unique}-base"),
-            "labels": {"project": "darwin-debugger", "task": task.id, "role": "base"},
+            "labels": {"project": "autoresolve", "task": task.id, "role": "base"},
             "auto_delete_interval": self.auto_delete_minutes,
         }
         if self.clone_mode == "fork":
@@ -280,7 +280,7 @@ class DaytonaSandboxManager:
                     image=self.base_image,
                     name=name,
                     labels={
-                        "project": "darwin-debugger",
+                        "project": "autoresolve",
                         "task": task.id,
                         "strategy": strategy_id,
                         "role": "candidate",
@@ -308,7 +308,7 @@ class DaytonaSandboxManager:
                 image=self.base_image,
                 name=_safe_name(name),
                 labels={
-                    "project": "darwin-debugger",
+                    "project": "autoresolve",
                     "repo": _safe_name(repo),
                     "issue": str(issue_number),
                     "role": "issue-repair",

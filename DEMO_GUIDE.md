@@ -1,4 +1,4 @@
-# Darwin Debugger demo guide
+# AutoResolve demo guide
 
 ## What can run now
 
@@ -35,7 +35,7 @@ present that output.
 
 Use two pieces of evidence rather than claiming the saved-results renderer is a live race:
 
-1. Run `darwin-debugger smoke` to demonstrate live Daytona execution, filesystem isolation, and
+1. Run `autoresolve smoke` to demonstrate live Daytona execution, filesystem isolation, and
    cleanup. This uses Daytona access and creates temporary sandboxes.
 2. Run `python3 demo/demo.py --results demo/recorded_results.json --replay-delay 0.35` to replay the
    recorded controlled experiment.
@@ -53,7 +53,7 @@ The live smoke test and real experiment require the project environment:
 python3 -m venv .venv
 . .venv/bin/activate
 python3 -m pip install -e '.[dev]'
-darwin-debugger validate --manifest benchmark/tasks.json
+autoresolve validate --manifest benchmark/tasks.json
 pytest tests -q
 ```
 
@@ -73,7 +73,7 @@ Run:
 
 ```bash
 . .venv/bin/activate
-darwin-debugger smoke
+autoresolve smoke
 ```
 
 Expected final line:
@@ -107,7 +107,7 @@ Run the controlled experiment:
 
 ```bash
 . .venv/bin/activate
-darwin-debugger run \
+autoresolve run \
   --manifest benchmark/tasks.json \
   --results artifacts/results.json \
   --strategies v0_baseline,v1_test_first,v2_reflection,v3_risk_controlled \

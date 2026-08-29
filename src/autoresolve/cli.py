@@ -21,7 +21,7 @@ from .strategies import STRATEGIES, select_strategies
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="darwin-debugger")
+    parser = argparse.ArgumentParser(prog="autoresolve")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     validate = subparsers.add_parser("validate", help="validate the benchmark manifest")
@@ -53,7 +53,7 @@ def _parser() -> argparse.ArgumentParser:
 def _smoke() -> int:
     manager = DaytonaSandboxManager(auto_delete_minutes=15)
     try:
-        with tempfile.TemporaryDirectory(prefix="darwin-smoke-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="autoresolve-smoke-") as temporary:
             root = Path(temporary)
             repo = root / "repo"
             hidden = root / "hidden"

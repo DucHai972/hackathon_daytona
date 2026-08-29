@@ -8,8 +8,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from darwin_debugger.contracts import BenchmarkTask
-from darwin_debugger.sandbox import (
+from autoresolve.contracts import BenchmarkTask
+from autoresolve.sandbox import (
     DaytonaSandboxManager,
     PreparedTaskSandboxes,
     SandboxError,
@@ -161,7 +161,7 @@ def test_independent_mode_creates_and_prepares_candidate(tmp_path: Path) -> None
 
 
 def test_hidden_tests_are_injected_next_to_repo_files(tmp_path: Path, monkeypatch) -> None:
-    from darwin_debugger import sandbox as module
+    from autoresolve import sandbox as module
 
     calls: list[tuple[Path, str, int]] = []
 

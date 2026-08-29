@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Darwin Debugger</title>
+<title>AutoResolve</title>
 <style>
   :root {
     --bg: #0d1117; --panel: #161b22; --line: #30363d;
@@ -102,7 +102,7 @@
 </head>
 <body>
 <header>
-  <h1>DARWIN DEBUGGER</h1>
+  <h1>AUTORESOLVE</h1>
   <span class="sub">issue &rarr; sandbox &rarr; tests &rarr; pull request</span>
   <span class="sub" id="conn" style="margin-left:auto"></span>
 </header>
@@ -249,7 +249,7 @@ async function tick() {
       conn.textContent = "waiting for a run";
       if (!lastGood) root.innerHTML =
         `<p class="empty">No run journal yet. Start one with
-         <code>darwin-debugger fix --repo owner/name --issue 42</code>,
+         <code>autoresolve fix --repo owner/name --issue 42</code>,
          or replay a recorded run with
          <code>python dashboard/server.py --replay dashboard/sample_run.json</code>.</p>`;
       return;

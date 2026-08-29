@@ -1,6 +1,6 @@
-# Darwin Debugger
+# AutoResolve
 
-Darwin Debugger reads a GitHub issue, repairs the repository inside an isolated Daytona sandbox,
+AutoResolve reads a GitHub issue, repairs the repository inside an isolated Daytona sandbox,
 verifies the patch with the repository's own tests, and opens a pull request. Its live dashboard
 shows the current phase, model-token usage, test results, diff, and final PR link.
 
@@ -59,7 +59,7 @@ python dashboard/server.py --port 8765
 First run without changing GitHub:
 
 ```bash
-darwin-debugger fix \
+autoresolve fix \
   --repo owner/name \
   --issue 42 \
   --strategy v1_test_first \
@@ -70,10 +70,10 @@ darwin-debugger fix \
 `--dry-run` still fetches the issue, clones the repository, runs the repair in Daytona, validates
 the tests, captures the diff, and applies it to a temporary host clone. It stops before push and PR
 creation. When the journal and diff look correct, omit `--dry-run` to push
-`darwin/issue-42` and open the pull request:
+`autoresolve/issue-42` and open the pull request:
 
 ```bash
-darwin-debugger fix --repo owner/name --issue 42
+autoresolve fix --repo owner/name --issue 42
 ```
 
 The command prints the journal path under `artifacts/runs/`. A PR is reported only when GitHub
@@ -84,8 +84,8 @@ returns its URL. Use `--timeout` or `--journal-dir` to override their 120-second
 
 ```bash
 # Validate and run the harder benchmark
-darwin-debugger validate --manifest benchmark/tasks.json
-darwin-debugger run \
+autoresolve validate --manifest benchmark/tasks.json
+autoresolve run \
   --manifest benchmark/tasks.json \
   --results artifacts/results.json \
   --strategies v0_baseline,v1_test_first,v2_reflection,v3_risk_controlled \
@@ -96,7 +96,7 @@ python3 demo/demo.py --results demo/recorded_results.json --replay-delay 0.35
 python3 demo/demo.py --sample --replay-delay 0.35
 
 # Verify Daytona execution, isolation, and cleanup
-darwin-debugger smoke
+autoresolve smoke
 ```
 
 The committed recording predates the harder decoy benchmark. Run a fresh controlled experiment

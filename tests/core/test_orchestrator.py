@@ -3,12 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from darwin_debugger.agent import AgentOutcome
-from darwin_debugger.contracts import BenchmarkManifest, BenchmarkTask
-from darwin_debugger.orchestrator import ExperimentOrchestrator
-from darwin_debugger.provider import TokenUsage
-from darwin_debugger.sandbox import CommandResult
-from darwin_debugger.strategies import STRATEGIES
+from autoresolve.agent import AgentOutcome
+from autoresolve.contracts import BenchmarkManifest, BenchmarkTask
+from autoresolve.orchestrator import ExperimentOrchestrator
+from autoresolve.provider import TokenUsage
+from autoresolve.sandbox import CommandResult
+from autoresolve.strategies import STRATEGIES
 
 
 class FakeSandbox:
@@ -88,7 +88,7 @@ def _task(tmp_path: Path, task_id: str, split: str) -> BenchmarkTask:
 
 
 def test_orchestrator_promotes_best_and_rechecks_held_out(tmp_path, monkeypatch) -> None:
-    from darwin_debugger import orchestrator as module
+    from autoresolve import orchestrator as module
 
     tasks = (
         _task(tmp_path, "dev_01", "development"),

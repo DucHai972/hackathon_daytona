@@ -83,11 +83,11 @@ Daytona should be essential to the experiment rather than included as a superfic
 
 Build a self-improving coding agent evaluated on deterministic repository tests. Run several agent strategies in parallel isolated Daytona sandboxes with identical starting state, score their patches, analyze failures, promote the strongest strategy, and demonstrate a measurable improvement on held-out tasks. Use VM forking as an optional acceleration only where the account and region support it.
 
-Working title: **Darwin Debugger**.
+Working title: **AutoResolve**.
 
 North-star demo claim:
 
-> One coding agent solved X% of repository bugs. Darwin Debugger safely tested competing reasoning strategies in isolated Daytona sandboxes and raised held-out success to Y%.
+> One coding agent solved X% of repository bugs. AutoResolve safely tested competing reasoning strategies in isolated Daytona sandboxes and raised held-out success to Y%.
 
 ## Sources
 

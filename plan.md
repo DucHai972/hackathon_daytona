@@ -1,8 +1,8 @@
-# Darwin Debugger — issue→PR product with a live transparency dashboard
+# AutoResolve — issue→PR product with a live transparency dashboard
 
 ## One-sentence product
 
-Darwin Debugger reads a GitHub issue, repairs the repository inside an isolated
+AutoResolve reads a GitHub issue, repairs the repository inside an isolated
 Daytona sandbox, proves the fix with the project's own tests, and opens a pull
 request — while a live dashboard shows the tokens it spent and the tests it
 turned green.
@@ -24,10 +24,10 @@ Only the two ends are new. The agent loop never cared where its task came from.
 
 | Reused unchanged | Why it fits |
 | --- | --- |
-| `src/darwin_debugger/agent.py` `RepairAgent` | Bounded inspect→patch→test loop that only ever edits inside a sandbox. |
-| `src/darwin_debugger/sandbox.py` transfer + cleanup | Host→sandbox upload and delete-on-failure already work. |
-| `src/darwin_debugger/scoring.py` `parse_pytest_counts` | Already yields passed/failed/errors — the dashboard's test numbers. |
-| `src/darwin_debugger/strategies.py` | The promoted strategy becomes the product agent's prompt. |
+| `src/autoresolve/agent.py` `RepairAgent` | Bounded inspect→patch→test loop that only ever edits inside a sandbox. |
+| `src/autoresolve/sandbox.py` transfer + cleanup | Host→sandbox upload and delete-on-failure already work. |
+| `src/autoresolve/scoring.py` `parse_pytest_counts` | Already yields passed/failed/errors — the dashboard's test numbers. |
+| `src/autoresolve/strategies.py` | The promoted strategy becomes the product agent's prompt. |
 | `benchmark/**`, `demo/**`, `orchestrator.py` | Untouched. The evaluation arm. |
 
 ## Non-negotiables
@@ -60,7 +60,7 @@ writes it; Claude's dashboard reads it. Neither side imports the other's code.
   "attempts": [{"n": 1, "tokens": {}, "tests": {}, "duration_seconds": 0.0}],
   "events": [{"at": "...", "phase": "clone", "message": "..."}],
   "patch": {"files": [], "lines_changed": 0, "diff": ""},
-  "pull_request": {"branch": "darwin/issue-42", "state": "not_opened", "url": null},
+  "pull_request": {"branch": "autoresolve/issue-42", "state": "not_opened", "url": null},
   "started_at": "...", "finished_at": null
 }
 ```
@@ -95,7 +95,7 @@ merge order does not matter.
 If a task appears to require editing the other owner's path, stop and describe
 the interface change in the handoff. The owner makes the change.
 
-Deliberate consequence: Claude does **not** add a `darwin-dashboard` console
+Deliberate consequence: Claude does **not** add an `autoresolve-dashboard` console
 script, because `pyproject.toml` is Codex's. The dashboard runs as
 `python dashboard/server.py`. Codex may add the entry later; it is not needed
 for the demo.
@@ -113,7 +113,7 @@ Owns `src/**`, `tests/core/**`, `pyproject.toml`, `README.md`.
 `usage` block. A missing block means zeros — never a crash. Thread the usage
 through `RepairAgent` so each attempt records what it spent.
 
-### 2. `src/darwin_debugger/github.py`
+### 2. `src/autoresolve/github.py`
 
 REST over `urllib`, matching the style already in `provider.py`.
 **`gh` is not installed — do not plan around it.**
@@ -136,7 +136,7 @@ REST over `urllib`, matching the style already in `provider.py`.
 ### 4. `pipeline.py`, the journal writer, and CLI `fix`
 
 ```text
-darwin-debugger fix --repo owner/name --issue 42 [--dry-run] [--strategy v1_test_first] [--test-command "pytest -q"]
+autoresolve fix --repo owner/name --issue 42 [--dry-run] [--strategy v1_test_first] [--test-command "pytest -q"]
 ```
 
 1. Host `git clone --depth 1` into a temp dir; `fetch_issue`.
@@ -145,7 +145,7 @@ darwin-debugger fix --repo owner/name --issue 42 [--dry-run] [--strategy v1_test
 3. Run `RepairAgent` with the repository's own test command.
 4. `git diff HEAD` **inside** the sandbox — the patch comes back as command
    output. Nothing is downloaded.
-5. Host: `git checkout -b darwin/issue-42`, `git apply`, commit, push, open the
+5. Host: `git checkout -b autoresolve/issue-42`, `git apply`, commit, push, open the
    PR.
 6. `--dry-run` stops before the push.
 7. Write the journal after **every** phase. Delete the sandbox in a `finally`.
@@ -227,10 +227,10 @@ python -m pytest tests/benchmark tests/demo tests/core tests/dashboard -q
 python dashboard/server.py --replay dashboard/sample_run.json --port 8765
 
 # pipeline without touching GitHub
-darwin-debugger fix --repo owner/name --issue 42 --dry-run
+autoresolve fix --repo owner/name --issue 42 --dry-run
 
 # the real thing, dashboard open beside it
-darwin-debugger fix --repo owner/name --issue 42
+autoresolve fix --repo owner/name --issue 42
 ```
 
 Done when the dashboard shows the phase timeline advancing, a non-zero token
@@ -245,7 +245,7 @@ The benchmark and strategy race remain exactly as built:
 
 ```bash
 python -m pytest tests/benchmark -q          # 8 tasks, decoy patches, all validated
-darwin-debugger run --strategies v0_baseline,v1_test_first,v2_reflection,v3_risk_controlled
+autoresolve run --strategies v0_baseline,v1_test_first,v2_reflection,v3_risk_controlled
 python demo/demo.py --results demo/recorded_results.json
 ```
 

@@ -16,9 +16,7 @@ SAMPLE = REPO_ROOT / "dashboard" / "sample_run.json"
 
 def write(tmp_path, payload, name="run.json"):
     path = tmp_path / name
-    path.write_text(
-        payload if isinstance(payload, str) else json.dumps(payload), encoding="utf-8"
-    )
+    path.write_text(payload if isinstance(payload, str) else json.dumps(payload), encoding="utf-8")
     return path
 
 
@@ -34,7 +32,7 @@ def running(**overrides):
         "tests": {"passed": 3, "failed": 1, "errors": 0, "total": 4, "command": "pytest -q"},
         "attempts": [],
         "events": [{"at": "2026-08-29T15:40:00Z", "phase": "clone", "message": "cloned"}],
-        "pull_request": {"branch": "darwin/issue-7", "state": "not_opened", "url": None},
+        "pull_request": {"branch": "autoresolve/issue-7", "state": "not_opened", "url": None},
     }
     journal.update(overrides)
     return journal

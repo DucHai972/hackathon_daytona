@@ -13,7 +13,7 @@ The branch head may include this handoff-only commit after the implementation co
 Codex implemented only Codex-owned paths:
 
 - Root project setup: `.gitignore`, `README.md`, `pyproject.toml`, and `uv.lock`.
-- `src/darwin_debugger/**`:
+- `src/autoresolve/**`:
   - Frozen benchmark-manifest and result-artifact contracts.
   - Five controlled reasoning strategies with equal attempt budgets.
   - OpenAI-compatible, provider-neutral model adapter.
@@ -38,9 +38,9 @@ Commands run:
 uv lock
 .venv/bin/ruff check src tests/core
 .venv/bin/ruff format --check src tests/core
-.venv/bin/pytest tests/core --cov=darwin_debugger --cov-report=term-missing
-.venv/bin/darwin-debugger strategies
-.venv/bin/darwin-debugger smoke
+.venv/bin/pytest tests/core --cov=autoresolve --cov-report=term-missing
+.venv/bin/autoresolve strategies
+.venv/bin/autoresolve smoke
 ```
 
 Results:
@@ -60,7 +60,7 @@ Results:
 - Output: `artifacts/results.json` as documented in `plan.md`.
 - Claude's demo must consume the output JSON without importing `src/**`.
 - Hidden tests should be a directory whose test files are discoverable by the manifest's
-  `hidden_test_command` after injection at `/workspace/repo/_darwin_hidden_tests`.
+  `hidden_test_command` after injection at `/workspace/repo/_autoresolve_hidden_tests`.
 
 ## Daytona finding
 

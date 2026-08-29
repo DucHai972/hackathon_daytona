@@ -1,4 +1,4 @@
-from darwin_debugger.cli import _parser
+from autoresolve.cli import _parser
 
 
 def test_fix_command_contract() -> None:

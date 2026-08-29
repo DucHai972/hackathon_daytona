@@ -1,4 +1,4 @@
-"""Darwin Debugger core runtime."""
+"""AutoResolve core runtime."""
 
 from .contracts import BenchmarkManifest, BenchmarkTask, ExperimentResults, RunRecord
 

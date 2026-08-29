@@ -1,4 +1,4 @@
-# Darwin Debugger — three-minute pitch
+# AutoResolve — three-minute pitch
 
 Rehearsed core is **0:00–2:10**. Everything after that is buffer; cut from the
 bottom if the clock is tight.
@@ -18,7 +18,7 @@ experiment result.
 
 ## 0:20–0:45 — solution
 
-> "Darwin Debugger creates one isolated Daytona sandbox per reasoning strategy.
+> "AutoResolve creates one isolated Daytona sandbox per reasoning strategy.
 > Every candidate independently repairs the same issue, runs the tests in its
 > own isolated filesystem, and gets a deterministic score. Nothing generated
 > ever runs here."

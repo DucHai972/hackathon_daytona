@@ -4,9 +4,9 @@ import json
 import os
 from pathlib import Path
 
-from darwin_debugger.journal import REQUIRED_FIELDS, RunJournal
-from darwin_debugger.provider import TokenUsage
-from darwin_debugger.scoring import TestCounts
+from autoresolve.journal import REQUIRED_FIELDS, RunJournal
+from autoresolve.provider import TokenUsage
+from autoresolve.scoring import TestCounts
 
 
 def create_journal(tmp_path: Path, *, secrets: tuple[str, ...] = ()) -> RunJournal:
@@ -18,7 +18,7 @@ def create_journal(tmp_path: Path, *, secrets: tuple[str, ...] = ()) -> RunJourn
         model="gemini-test",
         strategy_id="v1_test_first",
         test_command="pytest -q",
-        branch="darwin/issue-7",
+        branch="autoresolve/issue-7",
         secrets=secrets,
         input_cost_per_mtok=1.0,
         output_cost_per_mtok=2.0,
@@ -62,7 +62,7 @@ def test_journal_replacement_keeps_old_or_new_file_valid(tmp_path: Path, monkeyp
         json.loads(Path(source).read_text(encoding="utf-8"))
         real_replace(source, destination)
 
-    monkeypatch.setattr("darwin_debugger.journal.os.replace", observing_replace)
+    monkeypatch.setattr("autoresolve.journal.os.replace", observing_replace)
     journal.event("clone", "clone complete")
 
     assert observations[0]["events"] == []

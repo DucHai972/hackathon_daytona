@@ -124,7 +124,7 @@
     {
       "at": "2026-08-29T15:41:14Z",
       "phase": "push",
-      "message": "pushed branch darwin/issue-42"
+      "message": "pushed branch autoresolve/issue-42"
     },
     {
       "at": "2026-08-29T15:41:17Z",
@@ -146,7 +146,7 @@
     "diff": "diff --git a/pricing.py b/pricing.py\nindex 3f1c2ab..8d4e910 100644\n--- a/pricing.py\n+++ b/pricing.py\n@@ -1,9 +1,12 @@\n+from decimal import ROUND_HALF_UP, Decimal\n+\n def apply_discount(cents, percent):\n     if not 0 <= percent <= 100:\n         raise ValueError(\"percent must be between 0 and 100\")\n-    return int(cents * (100 - percent) / 100)\n+    exact = Decimal(cents) * (Decimal(100 - percent) / Decimal(100))\n+    return int(exact.quantize(Decimal(1), rounding=ROUND_HALF_UP))\ndiff --git a/orders.py b/orders.py\nindex 91ab3de..c07f512 100644\n--- a/orders.py\n+++ b/orders.py\n@@ -6,4 +6,4 @@ def order_total_cents(sku, quantity, percent=0):\n     if quantity < 0:\n         raise ValueError(\"quantity must not be negative\")\n-    return apply_discount(unit_price_cents(sku), percent) * quantity\n+    return apply_discount(unit_price_cents(sku) * quantity, percent)\n"
   },
   "pull_request": {
-    "branch": "darwin/issue-42",
+    "branch": "autoresolve/issue-42",
     "state": "opened",
     "url": "https://github.com/owner/widget-store/pull/57"
   },

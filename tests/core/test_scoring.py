@@ -1,4 +1,4 @@
-from darwin_debugger.scoring import TestCounts, calculate_score, parse_pytest_counts
+from autoresolve.scoring import TestCounts, calculate_score, parse_pytest_counts
 
 
 def test_parse_pytest_counts_uses_final_summary() -> None:

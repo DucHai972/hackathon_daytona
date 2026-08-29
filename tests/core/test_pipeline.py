@@ -6,12 +6,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from darwin_debugger.agent import AgentAttempt, AgentOutcome
-from darwin_debugger.github import GitHubIssue
-from darwin_debugger.pipeline import HostGit, IssueToPRPipeline, PipelineError
-from darwin_debugger.provider import TokenUsage
-from darwin_debugger.sandbox import CommandResult
-from darwin_debugger.strategies import STRATEGIES
+from autoresolve.agent import AgentAttempt, AgentOutcome
+from autoresolve.github import GitHubIssue
+from autoresolve.pipeline import HostGit, IssueToPRPipeline, PipelineError
+from autoresolve.provider import TokenUsage
+from autoresolve.sandbox import CommandResult
+from autoresolve.strategies import STRATEGIES
 
 
 class FakeSandbox:
@@ -119,7 +119,7 @@ def test_host_git_error_redacts_credential(tmp_path: Path) -> None:
 
 
 def test_dry_run_writes_journal_and_never_pushes(tmp_path: Path, monkeypatch) -> None:
-    from darwin_debugger import pipeline as module
+    from autoresolve import pipeline as module
 
     manager = FakeManager()
     git = FakeGit()
@@ -181,7 +181,7 @@ def test_dry_run_writes_journal_and_never_pushes(tmp_path: Path, monkeypatch) ->
 def test_live_run_records_pr_only_after_push_and_github_response(
     tmp_path: Path, monkeypatch
 ) -> None:
-    from darwin_debugger import pipeline as module
+    from autoresolve import pipeline as module
 
     manager = FakeManager()
     git = FakeGit()
@@ -221,7 +221,7 @@ def test_live_run_records_pr_only_after_push_and_github_response(
     assert github.opened
     assert result.pull_request_url == "https://github.com/acme/widgets/pull/8"
     assert payload["pull_request"] == {
-        "branch": "darwin/issue-7",
+        "branch": "autoresolve/issue-7",
         "state": "opened",
         "url": result.pull_request_url,
     }

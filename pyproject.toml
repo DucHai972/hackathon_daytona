@@ -3,7 +3,7 @@ requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "darwin-debugger"
+name = "autoresolve"
 version = "0.1.0"
 description = "Repair GitHub issues safely in Daytona sandboxes and deliver verified pull requests"
 readme = "README.md"
@@ -21,7 +21,7 @@ dev = [
 ]
 
 [project.scripts]
-darwin-debugger = "darwin_debugger.cli:main"
+autoresolve = "autoresolve.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

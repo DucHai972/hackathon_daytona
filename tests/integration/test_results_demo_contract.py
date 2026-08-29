@@ -8,7 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "demo"))
 
 import demo  # noqa: E402
-from darwin_debugger.contracts import ExperimentResults, RunRecord  # noqa: E402
+from autoresolve.contracts import ExperimentResults, RunRecord  # noqa: E402
 
 
 def test_runtime_results_render_in_demo(tmp_path: Path) -> None:

@@ -1,4 +1,4 @@
-# Darwin Debugger dashboard
+# AutoResolve dashboard
 
 Live transparency view for a repair run. Reads the run journal written by the
 pipeline (`artifacts/runs/<run_id>.json`, the contract frozen in `plan.md`) and
