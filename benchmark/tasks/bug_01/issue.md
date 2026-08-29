@@ -1,19 +1,16 @@
-# Last item on every page is missing
+# API limit can be doubled by timing requests around the minute mark
 
-`page_items()` is used to paginate search results. Since we shipped the new
-results page, users report that each page shows one item fewer than the page
-size, and the final item of the result set never appears anywhere.
+A customer on the 2-requests-per-60-seconds plan pushed four requests through
+in about two seconds and none of them were rejected:
 
-Reproduction:
-
-```python
-from pagination import page_items
-
-items = ["a", "b", "c", "d", "e"]
-print(page_items(items, page=1, per_page=3))
+```
+12:00:59.1  POST /v1/jobs   202
+12:00:59.4  POST /v1/jobs   202
+12:01:01.2  POST /v1/jobs   202   <- should have been 429
+12:01:01.6  POST /v1/jobs   202   <- should have been 429
 ```
 
-Expected `['a', 'b', 'c']`, we get `['a', 'b']`.
-
-Page counts reported by `page_count()` look correct, so the problem seems to be
-in how a page is sliced out of the list.
+They are staying under the cap on paper but doing double the work in practice,
+and support has seen the same pattern from three other accounts. Whatever
+window the limiter is keeping does not seem to line up with the last 60
+seconds of actual traffic.

@@ -1,21 +1,17 @@
-# Config loader dies on any setting that contains an equals sign
+# Backup job fails whenever a path contains a space
 
-Our deploy config is a flat `key = value` file. It has worked fine until
-someone added a URL with a query string, and now every deploy fails before it
-starts.
-
-```
-$ cat deploy.conf
-region = eu-west-1
-callback = https://example.com/hook?token=abc
-```
+The scheduler stores each job as a single command line and splits it before
+running it. Any customer whose destination directory has a space in it gets a
+broken run:
 
 ```
-  File "config.py", line 18, in parse_config
-    key, value = line.split("=")
-ValueError: too many values to unpack (expected 2)
+job:  pg_dump --out "/var/My Backups/db.sql"
+argv: ['pg_dump', '--out', '"/var/My', 'Backups/db.sql"']
 ```
 
-Only the first equals sign separates the key from the value; everything after
-it is part of the value. Comment lines and blank lines already work and should
-keep working.
+The quotes are being passed through as literal characters and the path is torn
+in half. It also swallows an obviously malformed command instead of complaining
+about it — `echo "oops` runs happily with a stray quote in the argument.
+
+The splitting rules we need are written at the top of the module; the code
+underneath does not implement them.

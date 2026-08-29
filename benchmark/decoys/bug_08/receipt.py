@@ -1,12 +1,8 @@
-"""Plain-text receipt rendering for the till printer.
+"""Plausible but incorrect repair: the reported symptom is the dropped last
+line, so only the total is fixed.
 
-Items are ``(name, unit_price_cents, quantity)`` tuples.
-
-Layout rules:
-  * every rendered line is exactly `width` characters wide so the printer
-    columns line up
-  * amounts print with two decimal places and a comma between thousands, so
-    123456 cents prints as ``1,234.56``
+The documented thousands separator is still missing, which nothing on a small
+receipt reveals.
 """
 
 
@@ -16,7 +12,7 @@ def receipt_total(items):
 
 
 def _money(amount_cents):
-    return f"{amount_cents / 100:,.2f}"
+    return f"{amount_cents / 100:.2f}"
 
 
 def _row(label, amount_cents, width):
