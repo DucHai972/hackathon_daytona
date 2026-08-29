@@ -167,6 +167,10 @@ def test_dry_run_writes_journal_and_never_pushes(tmp_path: Path, monkeypatch) ->
     assert git.applied
     assert not git.pushed
     assert "apt-get install -y -qq git" in commands[0]
+    assert "__pycache__/" in commands[0]
+    assert "*.py[cod]" in commands[0]
+    assert ".pytest_cache/" in commands[0]
+    assert "> .git/info/exclude" in commands[0]
     assert payload["tokens"]["total"] == 12
     assert payload["tests"]["passed"] == 2
     assert payload["patch"]["files"] == ["module.py"]

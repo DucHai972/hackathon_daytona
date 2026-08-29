@@ -247,6 +247,8 @@ class IssueToPRPipeline:
                     "apt-get update -qq && apt-get install -y -qq git; fi && "
                     "git init -q && git config user.name 'Darwin Debugger' && "
                     "git config user.email 'darwin-debugger@users.noreply.github.com' && "
+                    "printf '%s\\n' '__pycache__/' '*.py[cod]' '.pytest_cache/' "
+                    "'.venv/' 'node_modules/' > .git/info/exclude && "
                     "git add -A && git commit -qm 'Darwin baseline'",
                     cwd="/workspace/repo",
                     timeout=self.timeout_seconds,
