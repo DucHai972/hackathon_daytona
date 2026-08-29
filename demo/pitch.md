@@ -3,17 +3,10 @@
 Rehearsed core is **0:00–2:10**. Everything after that is buffer; cut from the
 bottom if the clock is tight.
 
-**Numbers below are placeholders.** Fill them from `artifacts/results.json`
-after the real run. Do not read a placeholder out loud, and do not present the
-sample fixture as an experiment result.
-
-| placeholder | fill from |
-| --- | --- |
-| `<BASE>` | `summary.baseline_success_rate` |
-| `<PROM>` | `summary.promoted_success_rate` |
-| `<WINNER>` | `summary.promoted_strategy` |
-| `<NTASKS>` / `<NSTRAT>` | task and strategy counts in the header |
-| `<FAILMODE>` | the dominant `failure_category` in the baseline runs |
+The recorded Gemini run completed 28/28 candidates. Baseline and promoted
+`v1_test_first` both scored 100% on the held-out split: an honest ceiling result,
+not evidence of strategy improvement. Do not present the sample fixture as an
+experiment result.
 
 ---
 
@@ -39,9 +32,9 @@ its printed total; the bug is visible on screen without reading code).
 
 Point at, in order:
 
-1. `<NSTRAT>` sandboxes starting from an identical filesystem.
+1. Four strategies starting from an identical filesystem in isolated sandboxes.
 2. Candidates diverging — inspecting, patching, testing.
-3. One candidate green, the others failing **without touching it**.
+3. All candidates finishing green without touching one another.
 
 > "Same starting state, same budget, same model. Only the reasoning strategy
 > differs. That is what makes this a comparison rather than an anecdote."
@@ -49,16 +42,16 @@ Point at, in order:
 ## 1:35–2:10 — measured improvement
 
 ```
-python demo/demo.py            # or: --results artifacts/results.json
+python demo/demo.py --results demo/recorded_results.json
 ```
 
-> "Baseline `<BASE>`. Promoted strategy `<WINNER>` at `<PROM>` on the held-out
-> split we never tuned against. Same model, same tasks, same step and time
-> budget — the only variable is the strategy.
+> "Baseline 100%. The selected test-first strategy also scored 100% on the
+> held-out split we never tuned against. Same model, same tasks, same step and
+> time budget — the only variable is the strategy.
 >
-> The baseline's dominant failure was `<FAILMODE>`. Our strategy variants target
-> failure modes like this, and the development benchmark selected the one that
-> transferred best to this held-out comparison."
+> That is a zero-point improvement: this benchmark hit a ceiling. The result
+> validates the isolated evaluation pipeline, but it does not prove test-first
+> reasoning beats the baseline. Our next registered benchmark needs harder tasks."
 
 If the improvement did not transfer to held-out, say so in that sentence and
 show the development-set result instead. An honest negative is a better answer
@@ -83,7 +76,8 @@ than a number nobody can reproduce.
 ## Running the demo
 
 ```bash
-python demo/demo.py                          # real results (artifacts/results.json)
+python demo/demo.py --results demo/recorded_results.json  # committed real recording
+python demo/demo.py                          # local raw result (artifacts/results.json)
 python demo/demo.py --replay-delay 0.35      # pace the race reveal on stage
 python demo/demo.py --sample                 # offline fallback, sample data
 ```
@@ -101,7 +95,7 @@ sample data if it ever appears on screen.
 - **"How do you know the patch is right and not test-shaped?"** Hidden tests
   are copied in only after the agent stops editing, so it never sees the
   assertions it is scored on.
-- **"How many runs?"** Six development tasks × `<NSTRAT>` strategies, then two
+- **"How many runs?"** Six development tasks × four strategies, then two
   held-out tasks × the baseline and development winner. Each candidate has up
   to three bounded repair attempts; every candidate result, including failures,
   is recorded in `artifacts/results.json`.

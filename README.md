@@ -10,7 +10,8 @@ untouched held-out benchmark.
 - Claude branch `claude/benchmark-demo`: `benchmark/**`, `demo/**`, and their tests.
 - The stable integration contracts are documented in `plan.md`.
 
-Do not commit `.env`, API keys, generated sandbox contents, or live result artifacts.
+Do not commit `.env`, API keys, generated sandbox contents, or raw live result artifacts. The
+sanitized, identifier-free replay fixture is `demo/recorded_results.json`.
 
 For sample, live-isolation, and real-results presentation paths, see [`DEMO_GUIDE.md`](DEMO_GUIDE.md).
 
@@ -59,6 +60,9 @@ darwin-debugger run \
   --results artifacts/results.json \
   --strategies v0_baseline,v1_test_first,v2_reflection,v3_risk_controlled \
   --workers 2
+
+# Replay the committed, sanitized Gemini experiment
+python3 demo/demo.py --results demo/recorded_results.json --replay-delay 0.35
 
 # Core tests and lint
 pytest tests/core
