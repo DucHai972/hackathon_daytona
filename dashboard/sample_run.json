@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "note": "SAMPLE DATA - reference instance of the run-journal contract, not a real run.",
+  "run_id": "20260829T154000Z-owner-widget-store-42",
+  "status": "passed",
+  "phase": "done",
+  "issue": {
+    "repo": "owner/widget-store",
+    "number": 42,
+    "title": "Discount is applied per unit instead of to the line total",
+    "url": "https://github.com/owner/widget-store/issues/42"
+  },
+  "model": "gemini-2.5-pro",
+  "strategy_id": "v1_test_first",
+  "sandbox_id": "dd-owner-widget-store-42-7c1e9f",
+  "tokens": {
+    "prompt": 41820,
+    "completion": 3960,
+    "total": 45780,
+    "calls": 2
+  },
+  "cost_usd": 0.0721,
+  "tests": {
+    "passed": 13,
+    "failed": 0,
+    "errors": 0,
+    "total": 13,
+    "command": "pytest -q"
+  },
+  "attempts": [
+    {
+      "n": 1,
+      "tokens": {
+        "prompt": 19240,
+        "completion": 1810,
+        "total": 21050,
+        "calls": 1
+      },
+      "tests": {
+        "passed": 12,
+        "failed": 1,
+        "errors": 0,
+        "total": 13,
+        "command": "pytest -q"
+      },
+      "duration_seconds": 22.4,
+      "summary": "Round the discount half up instead of truncating."
+    },
+    {
+      "n": 2,
+      "tokens": {
+        "prompt": 22580,
+        "completion": 2150,
+        "total": 24730,
+        "calls": 1
+      },
+      "tests": {
+        "passed": 13,
+        "failed": 0,
+        "errors": 0,
+        "total": 13,
+        "command": "pytest -q"
+      },
+      "duration_seconds": 24.1,
+      "summary": "Apply the discount to the line total, not to each unit."
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-08-29T15:40:02Z",
+      "phase": "clone",
+      "message": "cloned owner/widget-store at 9f21ac3"
+    },
+    {
+      "at": "2026-08-29T15:40:04Z",
+      "phase": "clone",
+      "message": "fetched issue #42: Discount is applied per unit instead of to the line total"
+    },
+    {
+      "at": "2026-08-29T15:40:19Z",
+      "phase": "prepare",
+      "message": "sandbox ready, worktree uploaded, baseline commit created"
+    },
+    {
+      "at": "2026-08-29T15:40:21Z",
+      "phase": "test",
+      "message": "baseline test run: 11 passed, 2 failed"
+    },
+    {
+      "at": "2026-08-29T15:40:23Z",
+      "phase": "analyze",
+      "message": "attempt 1: inspecting repository"
+    },
+    {
+      "at": "2026-08-29T15:40:41Z",
+      "phase": "patch",
+      "message": "attempt 1: replaced pricing.py"
+    },
+    {
+      "at": "2026-08-29T15:40:44Z",
+      "phase": "test",
+      "message": "attempt 1: 12 passed, 1 failed"
+    },
+    {
+      "at": "2026-08-29T15:40:46Z",
+      "phase": "analyze",
+      "message": "attempt 2: classifying the remaining failure"
+    },
+    {
+      "at": "2026-08-29T15:41:05Z",
+      "phase": "patch",
+      "message": "attempt 2: replaced pricing.py, orders.py"
+    },
+    {
+      "at": "2026-08-29T15:41:08Z",
+      "phase": "test",
+      "message": "attempt 2: 13 passed, 0 failed"
+    },
+    {
+      "at": "2026-08-29T15:41:10Z",
+      "phase": "diff",
+      "message": "captured patch: 2 files, 9 lines changed"
+    },
+    {
+      "at": "2026-08-29T15:41:14Z",
+      "phase": "push",
+      "message": "pushed branch darwin/issue-42"
+    },
+    {
+      "at": "2026-08-29T15:41:17Z",
+      "phase": "pr",
+      "message": "opened pull request #57"
+    },
+    {
+      "at": "2026-08-29T15:41:17Z",
+      "phase": "done",
+      "message": "sandbox deleted"
+    }
+  ],
+  "patch": {
+    "files": [
+      "pricing.py",
+      "orders.py"
+    ],
+    "lines_changed": 9,
+    "diff": "diff --git a/pricing.py b/pricing.py\nindex 3f1c2ab..8d4e910 100644\n--- a/pricing.py\n+++ b/pricing.py\n@@ -1,9 +1,12 @@\n+from decimal import ROUND_HALF_UP, Decimal\n+\n def apply_discount(cents, percent):\n     if not 0 <= percent <= 100:\n         raise ValueError(\"percent must be between 0 and 100\")\n-    return int(cents * (100 - percent) / 100)\n+    exact = Decimal(cents) * (Decimal(100 - percent) / Decimal(100))\n+    return int(exact.quantize(Decimal(1), rounding=ROUND_HALF_UP))\ndiff --git a/orders.py b/orders.py\nindex 91ab3de..c07f512 100644\n--- a/orders.py\n+++ b/orders.py\n@@ -6,4 +6,4 @@ def order_total_cents(sku, quantity, percent=0):\n     if quantity < 0:\n         raise ValueError(\"quantity must not be negative\")\n-    return apply_discount(unit_price_cents(sku), percent) * quantity\n+    return apply_discount(unit_price_cents(sku) * quantity, percent)\n"
+  },
+  "pull_request": {
+    "branch": "darwin/issue-42",
+    "state": "opened",
+    "url": "https://github.com/owner/widget-store/pull/57"
+  },
+  "started_at": "2026-08-29T15:40:00Z",
+  "finished_at": "2026-08-29T15:41:17Z"
+}
