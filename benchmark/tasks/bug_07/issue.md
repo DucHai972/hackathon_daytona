@@ -1,16 +1,16 @@
-# Discounted orders are charged the wrong amount
+# Multi-unit orders with a promotion are undercharged
 
-Finance reconciled yesterday's orders and found discounted multi-unit orders
-are off by a cent or two, always in the customer's favour.
+Finance reconciled a day of orders against the pricing spec and found every
+discounted order for more than one unit is a cent or two light, always in the
+customer's favour.
 
-```python
-order_total_cents("milk", 3, percent=33)   # 3 x 99c, 33% off
-# -> 198, finance expects 199
+```
+7 x milk @ 0.99 with SUMMER20 (20% off)
+charged 5.53, spec says 5.54
 ```
 
-Two rules from the pricing spec that the reconciliation script checks:
+Single-unit orders reconcile exactly, and orders with no promotion reconcile
+exactly, so it only shows up once a promotion meets a quantity above one.
 
-* A discount applies to the **line total**, not to each unit separately.
-* Money is rounded **half up** to the nearest cent, so 2.5c becomes 3c.
-
-Undiscounted orders and the catalogue lookups are fine.
+The pricing rules are written at the top of `promotions.py`. Whatever the code
+is doing does not match them.

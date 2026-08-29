@@ -1,16 +1,17 @@
-# Cart total does not change after adding an item
+# Newly uploaded documents do not appear in search until the page is reloaded
 
-The checkout page reads `Cart.total()` before and after the customer adds an
-item to the basket. The second read still shows the old amount, so customers
-see a total that is missing whatever they just added.
+Someone uploads a file, searches for a word that is definitely in it, and gets
+nothing back. A hard refresh makes it appear. From the console:
 
 ```python
-cart = Cart()
-cart.add("apple", 150)
-print(cart.total())   # 150
-cart.add("bread", 249)
-print(cart.total())   # 150  <- expected 399
+index = SearchIndex()
+index.add("notes", "quarterly revenue")
+index.search("revenue")          # ['notes']
+index.add("deck", "revenue plan")
+index.search("revenue")          # ['notes']      <- 'deck' is missing
 ```
 
-Reloading the page fixes it, which points at the memoised total rather than at
-the arithmetic. Removing an item looks like it has the same problem.
+Deleting a document takes effect immediately, so only the add path looks
+wrong. Note that search is called several times per render and the scan budget
+described in the module docstring is there to keep that render cheap — please
+keep it satisfied.

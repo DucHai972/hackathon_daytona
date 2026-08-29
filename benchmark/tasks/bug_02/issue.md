@@ -1,17 +1,17 @@
-# Dashboard crashes when a metric has no samples
+# Back-to-back room bookings render as two separate blocks
 
-The stats helpers are called once per metric when the dashboard renders. If a
-metric collected no samples in the selected time window the whole dashboard
-returns a 500 instead of rendering an empty cell.
-
-Traceback from production:
+The calendar view collapses a room's reservations into solid blocks. When one
+booking ends exactly as the next begins the view still draws two blocks with a
+hairline gap, and the tooltip reports "2 bookings" where staff expect one
+continuous occupancy.
 
 ```
-  File "stats.py", line 12, in mean
-    return sum(values) / len(values)
-ZeroDivisionError: division by zero
+09:00-11:00  meeting room 3
+11:00-12:30  meeting room 3
 ```
 
-The documented contract for these helpers is that an empty sequence has no
-average and no middle value, so they should report "no value" rather than
-raising. Please make the helpers honour that contract.
+Drawn as two blocks. Expected: one block, 09:00-12:30.
+
+Overlapping bookings collapse correctly, so only the exactly-adjacent case
+looks wrong. The reporting export builds on the same helper and shows the same
+split, which is starting to skew the occupancy figures.

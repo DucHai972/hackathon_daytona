@@ -42,3 +42,30 @@ def test_hidden_tests_detect_the_bug(task, tmp_path):
     work = materialize(task, tmp_path / "repo", with_hidden=True)
     code, output = run_pytest(work)
     assert code != 0, f"{task['id']} hidden tests pass on the broken repo:\n{output}"
+
+
+@pytest.mark.parametrize("task", tasks(), ids=task_ids())
+def test_decoy_passes_the_public_tests(task, tmp_path):
+    """The decoy is a plausible repair: it must survive the agent's own signal."""
+    work = materialize(task, tmp_path / "repo", with_decoy=True)
+    code, output = run_pytest(work)
+    assert code == 0, (
+        f"{task['id']} decoy fails its public tests, so it is not a plausible "
+        f"repair and proves nothing about the visible suite:\n{output}"
+    )
+
+
+@pytest.mark.parametrize("task", tasks(), ids=task_ids())
+def test_decoy_fails_the_hidden_tests(task, tmp_path):
+    """The point of the decoy: the visible tests alone cannot tell it is wrong.
+
+    This is the patch-overfitting property from the automated-program-repair
+    literature, made executable. If a decoy ever passes the hidden suite the
+    hidden tests are too weak and the task no longer discriminates.
+    """
+    work = materialize(task, tmp_path / "repo", with_decoy=True, with_hidden=True)
+    code, output = run_pytest(work)
+    assert code != 0, (
+        f"{task['id']} hidden tests accept the decoy patch; they are too weak "
+        f"to catch an overfitted repair:\n{output}"
+    )

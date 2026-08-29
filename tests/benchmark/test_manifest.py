@@ -3,6 +3,7 @@
 import pytest
 
 from harness import (
+    DECOYS_DIR,
     ORACLES_DIR,
     REPO_ROOT,
     REQUIRED_TASK_FIELDS,
@@ -132,3 +133,41 @@ def test_benchmark_does_not_depend_on_src():
     for path in (REPO_ROOT / "benchmark").rglob("*.py"):
         text = path.read_text(encoding="utf-8")
         assert "from src" not in text and "import src" not in text
+
+
+@pytest.mark.parametrize("task", tasks(), ids=task_ids())
+def test_decoy_exists_and_is_outside_the_repo(task):
+    decoy = (DECOYS_DIR / task["id"]).resolve()
+    assert decoy.is_dir(), f"{task['id']} has no decoy patch"
+    assert list(decoy.rglob("*.py"))
+    repo = (REPO_ROOT / task["repo_path"]).resolve()
+    assert not decoy.is_relative_to(repo)
+
+
+@pytest.mark.parametrize("task", tasks(), ids=task_ids())
+def test_decoy_only_replaces_files_that_exist_in_the_repo(task):
+    decoy = DECOYS_DIR / task["id"]
+    repo = REPO_ROOT / task["repo_path"]
+    for source in decoy.rglob("*"):
+        if source.is_file():
+            relative = source.relative_to(decoy)
+            assert (repo / relative).is_file(), (
+                f"{task['id']} decoy adds a new file {relative}; a decoy may only "
+                "replace files the agent can already see"
+            )
+
+
+@pytest.mark.parametrize("task", tasks(), ids=task_ids())
+def test_decoy_differs_from_the_oracle(task):
+    """A decoy that matches the oracle would prove nothing."""
+    decoy = DECOYS_DIR / task["id"]
+    oracle = ORACLES_DIR / task["id"]
+    identical = True
+    for source in sorted(decoy.rglob("*")):
+        if not source.is_file():
+            continue
+        counterpart = oracle / source.relative_to(decoy)
+        if not counterpart.is_file() or counterpart.read_bytes() != source.read_bytes():
+            identical = False
+            break
+    assert not identical, f"{task['id']} decoy is identical to its oracle"
