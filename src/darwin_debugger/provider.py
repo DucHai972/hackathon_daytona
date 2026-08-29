@@ -16,6 +16,17 @@ class ProviderError(RuntimeError):
     """Raised when the model provider fails or returns an invalid proposal."""
 
 
+def _sanitize_error_detail(detail: str) -> str:
+    sanitized = re.sub(r"https?://\S+", "[url]", detail)
+    sanitized = re.sub(
+        r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b",
+        "[id]",
+        sanitized,
+    )
+    sanitized = re.sub(r"\b(?:sk|xai)-[A-Za-z0-9_-]{12,}\b", "[credential]", sanitized)
+    return " ".join(sanitized.split())[-500:]
+
+
 class ModelProvider(Protocol):
     def complete(self, *, system: str, user: str) -> str: ...
 
@@ -85,15 +96,19 @@ class OpenAICompatibleProvider:
         model: str,
         base_url: str = "https://openrouter.ai/api/v1",
         timeout_seconds: int = 90,
+        max_completion_tokens: int = 4096,
     ) -> None:
         if not api_key:
             raise ProviderError("MODEL_API_KEY is required")
         if not model:
             raise ProviderError("MODEL_NAME is required")
+        if max_completion_tokens < 1:
+            raise ProviderError("MODEL_MAX_COMPLETION_TOKENS must be positive")
         self.api_key = api_key
         self.model = model
         self.endpoint = base_url.rstrip("/") + "/chat/completions"
         self.timeout_seconds = timeout_seconds
+        self.max_completion_tokens = max_completion_tokens
 
     @classmethod
     def from_environment(cls) -> OpenAICompatibleProvider:
@@ -102,6 +117,7 @@ class OpenAICompatibleProvider:
             model=os.environ.get("MODEL_NAME", ""),
             base_url=os.environ.get("MODEL_BASE_URL", "https://openrouter.ai/api/v1"),
             timeout_seconds=int(os.environ.get("MODEL_TIMEOUT_SECONDS", "90")),
+            max_completion_tokens=int(os.environ.get("MODEL_MAX_COMPLETION_TOKENS", "4096")),
         )
 
     def complete(self, *, system: str, user: str) -> str:
@@ -109,6 +125,7 @@ class OpenAICompatibleProvider:
             {
                 "model": self.model,
                 "temperature": 0,
+                "max_completion_tokens": self.max_completion_tokens,
                 "messages": [
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
@@ -131,7 +148,9 @@ class OpenAICompatibleProvider:
                 payload: dict[str, Any] = json.load(response)
         except urllib.error.HTTPError as exc:
             detail = exc.read(1000).decode("utf-8", errors="replace")
-            raise ProviderError(f"model API returned HTTP {exc.code}: {detail}") from exc
+            raise ProviderError(
+                f"model API returned HTTP {exc.code}: {_sanitize_error_detail(detail)}"
+            ) from exc
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             raise ProviderError(f"model API request failed: {exc}") from exc
         try:

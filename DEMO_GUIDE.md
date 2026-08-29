@@ -82,11 +82,12 @@ in the ignored local `.env`:
 
 ```text
 MODEL_API_KEY=your-local-value
-MODEL_NAME=your-model-name
-MODEL_BASE_URL=https://openrouter.ai/api/v1
+MODEL_NAME=grok-4.6
+MODEL_BASE_URL=https://api.x.ai/v1
+MODEL_MAX_COMPLETION_TOKENS=4096
 ```
 
-`MODEL_BASE_URL` is optional when the default OpenRouter-compatible endpoint is appropriate. Before
+These values select xAI's Grok API; `MODEL_API_KEY` must therefore contain an xAI API key. Before
 running, confirm the provider's pricing and available Daytona credits. With four strategies, the
 frozen design creates 24 development candidates plus 2–4 held-out candidates, and each candidate can
 make up to three bounded model attempts.
@@ -128,6 +129,8 @@ Keep a secure local backup for the presentation rather than committing it.
 - `DAYTONA_API_KEY is required`: activate the environment and configure the ignored local `.env`.
 - Model provider error: verify `MODEL_API_KEY`, `MODEL_NAME`, and the optional base URL without
   printing their values.
+- xAI HTTP 403 with no credits or license: purchase/assign credits for the API team in the xAI
+  console, then repeat one bounded preflight before starting the full experiment.
 - Venue network failure: use `python3 demo/demo.py --sample`; explicitly call it illustrative data.
 - Demo output scrolls too quickly: add `--replay-delay 0.35` or increase it slightly.
 - ANSI colours render badly: add `--no-color` or set `NO_COLOR=1`.

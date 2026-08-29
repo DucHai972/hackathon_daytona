@@ -31,6 +31,7 @@ DAYTONA_VM_SNAPSHOT=daytona-vm-small     # optional when clone mode is fork
 MODEL_API_KEY=...
 MODEL_NAME=...
 MODEL_BASE_URL=https://openrouter.ai/api/v1  # optional
+MODEL_MAX_COMPLETION_TOKENS=4096             # optional safety cap
 ```
 
 The model endpoint must implement the OpenAI-compatible Chat Completions API and JSON response
