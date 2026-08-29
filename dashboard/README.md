@@ -56,6 +56,22 @@ Cost is shown only when it can be worked out honestly: from `cost_usd`, or from
 both rate variables. Otherwise the page shows tokens alone rather than a
 number nobody can back up.
 
+## Rehearsing a run without the pipeline
+
+`dashboard/simulate_run.py` writes a journal phase by phase, at human speed,
+from `sample_run.json`. It is a rehearsal tool, not a pipeline: it invents
+nothing, and every journal it writes is labelled `SIMULATED RUN`.
+
+```bash
+python dashboard/server.py                    # terminal 1
+python dashboard/simulate_run.py              # terminal 2, then watch the page
+python dashboard/simulate_run.py --speed 4    # faster playback
+```
+
+It is also the second independent writer of the frozen journal contract, which
+is how we know the schema is implementable before the real pipeline lands.
+Generated journals go to `artifacts/runs/` and should not be committed.
+
 ## API
 
 | Route | Returns |
