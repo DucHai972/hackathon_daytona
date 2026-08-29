@@ -2,7 +2,7 @@
 
 ## One-sentence product
 
-Darwin Debugger is a self-improving coding agent that forks a clean Daytona workspace for each repair strategy, lets the variants independently fix the same repository bug, scores every patch with deterministic tests, learns from the failures, and promotes the best strategy.
+Darwin Debugger is a self-improving coding agent that forks a prepared Daytona sandbox for each repair strategy, lets the variants independently fix the same repository bug, scores every patch with deterministic tests, learns from the failures, and promotes the best strategy.
 
 ## The winning claim
 
@@ -181,6 +181,227 @@ tests/
 
 The exact structure may be simplified during implementation. Prioritize one command that runs the experiment.
 
+## Codex and Claude collaboration plan
+
+Codex and Claude will work from separate computers through GitHub. They must use separate branches and own disjoint paths so both can implement in parallel without editing the same files.
+
+### Branches
+
+- Stable coordination base: `main`.
+- Codex implementation branch: `codex/core`.
+- Claude implementation branch: `claude/benchmark-demo`.
+- Final assembly branch: `integration/final`.
+
+Neither agent should implement directly on `main`. Do not force-push shared branches. Both implementation branches must start from the same `main` commit containing this plan.
+
+### File ownership
+
+| Owner | May edit | Must treat as read-only |
+| --- | --- | --- |
+| Codex | `src/**`, `tests/core/**`, `scripts/**`, root configuration, `README.md`, and runtime-generated `artifacts/**` | `benchmark/**`, `demo/**`, and Claude handoff files |
+| Claude | `benchmark/**`, `tests/benchmark/**`, `tests/demo/**`, `demo/**`, and `handoffs/claude_*.md` | `src/**`, `tests/core/**`, root configuration, and Codex handoff files |
+| Joint review only | `memory.md` and `plan.md` after implementation begins | Neither agent edits these without first agreeing on the change |
+
+Generated caches, virtual environments, sandbox downloads, and secrets must never be committed. `.env` stays local and ignored.
+
+If a task appears to require editing another owner's path, stop and describe the requested interface change in the branch handoff report. The owner makes the change. Do not solve it by editing across the ownership boundary.
+
+### Frozen benchmark contract
+
+Claude will create `benchmark/tasks.json` with this logical structure:
+
+```json
+{
+  "schema_version": 1,
+  "tasks": [
+    {
+      "id": "bug_01",
+      "split": "development",
+      "issue_path": "benchmark/tasks/bug_01/issue.md",
+      "repo_path": "benchmark/tasks/bug_01/repo",
+      "hidden_tests_path": "benchmark/hidden_tests/bug_01",
+      "public_test_command": "pytest -q",
+      "hidden_test_command": "pytest -q",
+      "timeout_seconds": 60
+    }
+  ]
+}
+```
+
+Rules for this interface:
+
+- Paths are relative to the repository root.
+- Task IDs are unique and stable.
+- The split is exactly `development` or `held_out`.
+- The issue and public repository never expose hidden tests or oracle patches.
+- Hidden tests are injected only after the agent finishes editing.
+- Codex may read this manifest but must not change it during implementation.
+- Claude may add optional fields, but must not rename or remove the required fields above.
+
+### Frozen results contract
+
+Codex will write `artifacts/results.json`. Claude's demo reads it without importing anything from `src/`.
+
+```json
+{
+  "schema_version": 1,
+  "run_id": "2026-08-29T12:00:00Z",
+  "summary": {
+    "baseline_success_rate": 0.4,
+    "promoted_success_rate": 0.8,
+    "promoted_strategy": "v2_reflection"
+  },
+  "runs": [
+    {
+      "task_id": "bug_01",
+      "split": "development",
+      "strategy_id": "v0_baseline",
+      "sandbox_id": "sandbox-id-or-redacted",
+      "status": "passed",
+      "score": 100,
+      "tests_passed": 8,
+      "tests_total": 8,
+      "duration_seconds": 24.5,
+      "steps": 2,
+      "patch_lines": 6,
+      "failure_category": null
+    }
+  ]
+}
+```
+
+Rules for this interface:
+
+- `status` is one of `passed`, `failed`, `timeout`, `agent_error`, or `infrastructure_error`.
+- Success rates are numbers from 0 to 1.
+- `runs` contains one record per task and strategy attempt.
+- Extra fields are allowed; required fields must remain stable.
+- No prompts containing secrets, API keys, raw environment variables, or sensitive sandbox URLs may appear.
+- Claude develops the demo against `demo/sample_results.json` using the same schema, then verifies it against the real artifact during integration.
+
+### Claude's assigned tasks
+
+Claude owns two independent deliverables and must not implement Daytona or the agent orchestrator.
+
+#### Claude task A — deterministic benchmark
+
+Create the complete `benchmark/**` package:
+
+1. Build 8 small Python repair tasks: 6 development and 2 held-out.
+2. Give every task a realistic `issue.md`, a self-contained broken repository, visible tests, separate hidden tests, and an oracle patch or reference solution kept outside the agent-visible repository.
+3. Cover varied failure modes: boundary logic, empty input, validation, exceptions, state mutation, sorting/filtering, multi-file behavior, and one visually understandable live-demo bug.
+4. Keep each test suite deterministic and normally below two seconds.
+5. Create `benchmark/tasks.json` using the frozen contract.
+6. Add `tests/benchmark/**` checks that validate paths, splits, unique IDs, hidden-test separation, and test commands.
+7. Prove every broken task fails at least one relevant test and every oracle solution passes public and hidden tests.
+8. Document how Codex should materialize a task in a fresh sandbox without revealing hidden tests.
+
+Acceptance criteria:
+
+- Exactly 8 valid tasks exist with a 6/2 split.
+- A single documented command validates all benchmark fixtures.
+- No benchmark needs network access or a secret.
+- No issue description leaks its oracle solution or hidden assertions.
+- The benchmark has no dependency on `src/**`.
+
+#### Claude task B — demo and pitch layer
+
+Create the complete `demo/**` package:
+
+1. Build a dependency-light terminal or static HTML presentation that reads only `artifacts/results.json`.
+2. Show the problem, active sandbox candidates, per-strategy status, winner, baseline success rate, promoted success rate, and improvement delta.
+3. Make missing, partial, failed, and timeout results render cleanly rather than crashing.
+4. Include `demo/sample_results.json` for independent development.
+5. Add a fallback command that renders the saved results without live Daytona access.
+6. Draft `demo/pitch.md` using the three-minute structure in this plan.
+7. Add `tests/demo/**` checks for schema parsing and edge cases without editing Codex-owned tests.
+
+Acceptance criteria:
+
+- One documented command launches or renders the demo.
+- It works with the sample results before Codex's implementation exists.
+- It later works unchanged with Codex's real `artifacts/results.json`.
+- It contains no fake claim presented as a real experiment result.
+- The core presentation can be completed in two minutes with a third minute as buffer.
+
+#### Claude handoff
+
+Claude finishes by creating `handoffs/claude_delivery.md` containing:
+
+- Branch name and final commit SHA.
+- Files added or changed.
+- Exact validation commands and their results.
+- Benchmark task inventory and held-out split.
+- Demo launch command.
+- Known limitations and integration assumptions.
+- Confirmation that Claude did not edit Codex-owned paths or access secrets.
+
+Claude then pushes `claude/benchmark-demo` and stops editing until Codex completes the first integration review.
+
+### Codex's assigned tasks
+
+Codex owns the runtime and integration layer:
+
+1. Create root project configuration and dependency setup.
+2. Implement Daytona sandbox creation, preparation, forking, labeling, command execution, timeouts, and cleanup in `src/**`.
+3. Implement the model adapter and bounded coding-agent tool loop.
+4. Implement V0-V4 strategy definitions and failure-reflection logic.
+5. Read Claude's benchmark manifest through the frozen contract without special-casing task IDs.
+6. Keep hidden tests outside the agent-visible sandbox until evaluation.
+7. Implement deterministic scoring and failure categorization.
+8. Run task/strategy candidates concurrently with a safe worker limit.
+9. Write `artifacts/results.json` using the frozen results contract.
+10. Add `tests/core/**` for lifecycle, parsing, scoring, concurrency, cleanup, and error behavior using mocks where appropriate.
+11. Create the one-command experiment and integration entry points.
+12. Review and integrate Claude's branch after independently running its validation.
+
+Codex finishes its implementation checkpoint by creating `handoffs/codex_delivery.md` with the same evidence categories as Claude's report.
+
+### Parallel execution order
+
+1. Merge this coordination plan to `main` so both computers share the same contracts.
+2. Both agents pull that exact commit and create their assigned branches.
+3. Claude develops the benchmark and demo entirely within Claude-owned paths.
+4. Codex develops the runtime against the documented manifest and uses temporary local fixtures only inside `tests/core/**`.
+5. Each agent pushes small, reviewable commits to only its own branch.
+6. Claude posts `handoffs/claude_delivery.md` and stops changing its branch.
+7. Codex fetches Claude's branch, reviews its diff, runs its validations, and merges it into `integration/final`.
+8. Codex resolves integration defects only in Codex-owned paths. Benchmark or demo defects go back to Claude for an owner-authored fix.
+9. After tests pass, freeze interfaces and run the real experiments.
+
+### Joint review and final delivery
+
+Joint review begins only after both delivery reports exist and the integrated project runs end to end.
+
+#### Codex reviews Claude's work
+
+- Inspect every benchmark task for realism, leakage, determinism, and split correctness.
+- Apply oracle solutions and independently run public and hidden tests.
+- Exercise the demo with passing, failing, timeout, partial, and malformed result fixtures.
+- Confirm Claude touched only Claude-owned paths.
+
+#### Claude reviews Codex's work
+
+- Review `src/**` and `tests/core/**` without editing them.
+- Check sandbox isolation, hidden-test timing, cleanup in failure paths, bounded execution, scoring fairness, and results-schema compliance.
+- Record findings in `handoffs/claude_core_review.md` with severity, path, evidence, and recommended correction.
+- Codex implements accepted fixes in Codex-owned files and records the verification result.
+
+#### Final joint gate
+
+- All benchmark and core tests pass from a clean checkout.
+- The Daytona smoke test, fork-isolation test, and cleanup test pass.
+- V0 and the promoted strategy run under identical budgets on the frozen held-out split.
+- The real results file validates against the frozen contract.
+- Claude's demo reads the real results without code changes.
+- The chart and pitch use only recorded experiment data.
+- A saved-results fallback works without network or Daytona access.
+- No secrets or `.env` content exist in tracked files or Git history.
+- Both handoff reports and the cross-review report have no unresolved critical findings.
+- The two-minute core pitch is rehearsed twice and the complete presentation stays below three minutes.
+
+Only after this gate passes should `integration/final` be merged into `main` for delivery.
+
 ## Build sequence and stop gates
 
 ### Phase 1 — prove Daytona, 20 minutes
@@ -194,10 +415,12 @@ Stop gate: do not build agent logic until sandbox creation, execution, and clean
 
 ### Phase 2 — build the evaluator, 35 minutes
 
-1. Prepare 3 initial bugs, including hidden tests.
-2. Implement sandbox reset/fork and test execution.
-3. Return a structured result with status, test counts, runtime, and logs.
-4. Run a known good patch and known bad patch to validate the scorer.
+1. Codex creates temporary evaluator fixtures only under `tests/core/**`; Codex does not edit Claude-owned `benchmark/**`.
+2. Codex implements sandbox reset/fork and test execution against the frozen benchmark contract.
+3. Codex returns a structured result with status, test counts, runtime, and logs.
+4. Codex runs a known good patch and known bad patch through the temporary fixtures to validate the scorer.
+
+In parallel, Claude builds and validates the real benchmark under `benchmark/**` and `tests/benchmark/**`.
 
 Stop gate: the evaluator must reliably distinguish success from failure before adding an LLM.
 
@@ -232,16 +455,16 @@ Stop gate: run only one clean optimization generation unless the entire pipeline
 
 ### Phase 6 — held-out proof, 25 minutes
 
-1. Freeze the benchmark, prompts, and scoring code.
+1. Merge the reviewed Claude deliverable into `integration/final`, then freeze the benchmark, prompts, and scoring code.
 2. Run V0 and the promoted strategy on the held-out tasks.
 3. Calculate success rate and supporting metrics.
-4. Generate the final chart and select one task for the live demo.
+4. Feed the real results into Claude's unchanged demo, generate the final visual, and select one task for the live demonstration.
 
 Stop gate: if improvement does not transfer, say so honestly and use the strongest reproducible development result while explaining the limitation. Never fabricate a winning number.
 
 ### Phase 7 — demo hardening, remaining 35-45 minutes
 
-1. Make one reliable demo command.
+1. Verify one reliable experiment command and one reliable Claude-owned demo command.
 2. Cache a completed run and screenshots/chart as a fallback.
 3. Verify no secret appears in logs, terminal history shown on screen, or artifacts.
 4. Rehearse twice and stop coding by 16:30.
