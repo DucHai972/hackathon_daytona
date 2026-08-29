@@ -1,19 +1,23 @@
 # Darwin Debugger
 
-Darwin Debugger compares coding-agent reasoning strategies in independent Daytona sandboxes,
-scores their repository patches with deterministic tests, and promotes the best strategy to an
-untouched held-out benchmark.
+Darwin Debugger reads a GitHub issue, repairs the repository inside an isolated Daytona sandbox,
+verifies the patch with the repository's own tests, and opens a pull request. Its live dashboard
+shows the current phase, model-token usage, test results, diff, and final PR link.
 
-## Ownership
+The existing strategy benchmark remains the evaluation arm: it compares prompts on eight repair
+tasks whose plausible decoy patches pass visible tests and fail hidden tests.
 
-- Codex branch `codex/core`: `src/**`, core tests, runtime configuration, and orchestration.
-- Claude branch `claude/benchmark-demo`: `benchmark/**`, `demo/**`, and their tests.
-- The stable integration contracts are documented in `plan.md`.
+## Safety model
 
-Do not commit `.env`, API keys, generated sandbox contents, or raw live result artifacts. The
-sanitized, identifier-free replay fixture is `demo/recorded_results.json`.
+- `GITHUB_TOKEN` is used only by host-side Git and GitHub REST calls. It is never uploaded to or
+  passed into a sandbox.
+- The host clones the repository, uploads a worktree without `.git`, `.venv`, `node_modules`, or
+  `__pycache__`, and performs every authenticated push.
+- The sandbox emits only test output and `git diff HEAD`; generated code never executes on the host.
+- Every sandbox is deleted in a `finally`, including provider, test, Git, and GitHub failure paths.
+- Run journals are atomically replaced and redact configured credentials before reaching disk.
 
-For sample, live-isolation, and real-results presentation paths, see [`DEMO_GUIDE.md`](DEMO_GUIDE.md).
+Do not commit `.env`, API keys, generated sandbox contents, or raw run journals.
 
 ## Setup
 
@@ -23,59 +27,88 @@ python3 -m venv .venv
 python3 -m pip install -e '.[dev]'
 ```
 
-Required runtime variables:
+Configure the ignored local `.env`:
 
 ```text
+GITHUB_TOKEN=...                         # fine-grained repo contents + pull-request access
 DAYTONA_API_KEY=...
-DAYTONA_CLONE_MODE=independent           # default: works with sandbox-only event key
-DAYTONA_VM_SNAPSHOT=daytona-vm-small     # optional when clone mode is fork
+DAYTONA_CLONE_MODE=independent
 MODEL_API_KEY=...
-MODEL_NAME=...
-MODEL_BASE_URL=https://openrouter.ai/api/v1  # optional
-MODEL_MAX_COMPLETION_TOKENS=4096             # optional safety cap
+MODEL_NAME=gemini-3.7-flash
+MODEL_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+MODEL_MAX_COMPLETION_TOKENS=4096
+MODEL_TIMEOUT_SECONDS=120
+
+# Optional dashboard cost estimate, USD per million tokens
+MODEL_COST_PER_MTOK_IN=...
+MODEL_COST_PER_MTOK_OUT=...
 ```
 
-The model endpoint must implement the OpenAI-compatible Chat Completions API and JSON response
-format. Daytona credentials remain on the host and are never copied into an agent sandbox.
+The model endpoint must implement OpenAI-compatible Chat Completions and JSON response format.
+The target demo repository should be a small Python project with `requirements.txt`, a green main
+branch, an open issue, and tests runnable with `pytest -q`.
 
-Forking is available on Daytona VM sandboxes, but the event account's EU region currently cannot
-launch the general VM snapshots. Its sandbox-only API key can create cold snapshots indirectly but
-cannot delete them. The safe verified default therefore creates identical candidates from the same
-pinned image and task archive, concurrently, and deletes every sandbox after evaluation. Set
-`DAYTONA_CLONE_MODE=fork` only when a fork-capable VM snapshot is available in the target region;
-use `snapshot` only with a key that can delete snapshots.
+## Issue-to-PR workflow
 
-## Commands
+Start the dashboard in one terminal:
 
 ```bash
-# Offline contract validation after Claude's benchmark is integrated
+python dashboard/server.py --port 8765
+```
+
+First run without changing GitHub:
+
+```bash
+darwin-debugger fix \
+  --repo owner/name \
+  --issue 42 \
+  --strategy v1_test_first \
+  --test-command "pytest -q" \
+  --dry-run
+```
+
+`--dry-run` still fetches the issue, clones the repository, runs the repair in Daytona, validates
+the tests, captures the diff, and applies it to a temporary host clone. It stops before push and PR
+creation. When the journal and diff look correct, omit `--dry-run` to push
+`darwin/issue-42` and open the pull request:
+
+```bash
+darwin-debugger fix --repo owner/name --issue 42
+```
+
+The command prints the journal path under `artifacts/runs/`. A PR is reported only when GitHub
+returns its URL. Use `--timeout` or `--journal-dir` to override their 120-second and
+`artifacts/runs` defaults.
+
+## Evaluation and fallback demo
+
+```bash
+# Validate and run the harder benchmark
 darwin-debugger validate --manifest benchmark/tasks.json
-
-# Low-cost Daytona execution/isolation/cleanup check
-darwin-debugger smoke
-
-# Controlled experiment
 darwin-debugger run \
   --manifest benchmark/tasks.json \
   --results artifacts/results.json \
   --strategies v0_baseline,v1_test_first,v2_reflection,v3_risk_controlled \
-  --workers 2
+  --workers 1
 
-# Replay the committed, sanitized Gemini experiment
+# Replay the committed earlier experiment or labelled sample fallback
 python3 demo/demo.py --results demo/recorded_results.json --replay-delay 0.35
+python3 demo/demo.py --sample --replay-delay 0.35
 
-# Core tests and lint
-pytest tests/core
-ruff check src tests/core
+# Verify Daytona execution, isolation, and cleanup
+darwin-debugger smoke
 ```
 
-## Safety and evaluation boundaries
+The committed recording predates the harder decoy benchmark. Run a fresh controlled experiment
+before making claims about strategy improvement on the current tasks.
 
-- Every candidate starts from the same pinned image, dependency instructions, and task archive.
-- Agents receive only the issue, visible repository files, and visible test output.
-- The agent can replace repository-relative files but cannot execute arbitrary model-supplied shell
-  commands.
-- Hidden tests are uploaded only after the bounded editing loop ends.
-- Every command and agent loop has a timeout or attempt limit.
-- Child sandboxes are deleted before their parent, including failure paths.
-- Results contain metrics and sanitized errors, never environment variables or API keys.
+## Development
+
+```bash
+pytest -q
+ruff check src tests/core
+ruff format --check src tests/core
+```
+
+The shared journal schema and conflict-free Codex/Claude ownership boundaries are frozen in
+[`plan.md`](plan.md). Claude's dashboard reads journals without importing the core package.

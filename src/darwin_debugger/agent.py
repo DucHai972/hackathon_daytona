@@ -7,10 +7,11 @@ import difflib
 import json
 import shlex
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
-from .provider import ModelProvider, PatchProposal, ProviderError
+from .provider import ModelProvider, PatchProposal, ProviderError, TokenUsage
 from .sandbox import CommandResult, SandboxLike, run_command
 from .strategies import Strategy
 
@@ -25,12 +26,23 @@ cases. Never request or expose credentials."""
 
 
 @dataclass(frozen=True, slots=True)
+class AgentAttempt:
+    n: int
+    usage: TokenUsage
+    test_result: CommandResult
+    duration_seconds: float
+    summary: str
+
+
+@dataclass(frozen=True, slots=True)
 class AgentOutcome:
     status: str
     public_result: CommandResult
     steps: int
     duration_seconds: float
     patch_lines: int
+    usage: TokenUsage = TokenUsage()
+    attempts: tuple[AgentAttempt, ...] = ()
     failure_category: str | None = None
     error: str | None = None
 
@@ -141,18 +153,28 @@ class RepairAgent:
         test_command: str,
         timeout_seconds: int,
         strategy: Strategy,
+        on_phase: Callable[[str, str], None] | None = None,
+        on_attempt: Callable[[AgentAttempt], None] | None = None,
     ) -> AgentOutcome:
         started = time.monotonic()
         steps = 0
+        total_usage = TokenUsage()
+        attempts: list[AgentAttempt] = []
+        phase = on_phase or (lambda _phase, _message: None)
+        attempt_callback = on_attempt or (lambda _attempt: None)
         try:
             original = _repository_snapshot(sandbox, cwd=self.repo_cwd, timeout=timeout_seconds)
+            phase("test", "running baseline tests")
             test_result = run_command(
                 sandbox,
                 test_command,
                 cwd=self.repo_cwd,
                 timeout=timeout_seconds,
             )
+            phase("test", f"baseline tests finished with exit code {test_result.exit_code}")
             for attempt in range(1, strategy.max_attempts + 1):
+                attempt_started = time.monotonic()
+                phase("analyze", f"attempt {attempt}: inspecting repository and test evidence")
                 snapshot = _repository_snapshot(sandbox, cwd=self.repo_cwd, timeout=timeout_seconds)
                 user_prompt = self._build_prompt(
                     issue=issue,
@@ -161,23 +183,62 @@ class RepairAgent:
                     snapshot=snapshot,
                     test_result=test_result,
                 )
-                raw = self.provider.complete(system=SYSTEM_PROMPT, user=user_prompt)
-                proposal = PatchProposal.parse(raw)
-                for replacement in proposal.files:
-                    _write_replacement(
+                raw, usage = self.provider.complete(system=SYSTEM_PROMPT, user=user_prompt)
+                total_usage += usage
+                try:
+                    proposal = PatchProposal.parse(raw)
+                except ProviderError:
+                    record = AgentAttempt(
+                        n=attempt,
+                        usage=usage,
+                        test_result=test_result,
+                        duration_seconds=time.monotonic() - attempt_started,
+                        summary="model returned an invalid patch proposal",
+                    )
+                    attempts.append(record)
+                    attempt_callback(record)
+                    raise
+                phase(
+                    "patch",
+                    f"attempt {attempt}: replacing {len(proposal.files)} repository file(s)",
+                )
+                try:
+                    for replacement in proposal.files:
+                        _write_replacement(
+                            sandbox,
+                            cwd=self.repo_cwd,
+                            path=replacement.path,
+                            content=replacement.content,
+                            timeout=timeout_seconds,
+                        )
+                    steps += 1
+                    phase("test", f"attempt {attempt}: running repository tests")
+                    test_result = run_command(
                         sandbox,
+                        test_command,
                         cwd=self.repo_cwd,
-                        path=replacement.path,
-                        content=replacement.content,
                         timeout=timeout_seconds,
                     )
-                steps += 1
-                test_result = run_command(
-                    sandbox,
-                    test_command,
-                    cwd=self.repo_cwd,
-                    timeout=timeout_seconds,
+                except Exception:
+                    record = AgentAttempt(
+                        n=attempt,
+                        usage=usage,
+                        test_result=test_result,
+                        duration_seconds=time.monotonic() - attempt_started,
+                        summary=proposal.summary,
+                    )
+                    attempts.append(record)
+                    attempt_callback(record)
+                    raise
+                record = AgentAttempt(
+                    n=attempt,
+                    usage=usage,
+                    test_result=test_result,
+                    duration_seconds=time.monotonic() - attempt_started,
+                    summary=proposal.summary,
                 )
+                attempts.append(record)
+                attempt_callback(record)
                 if test_result.exit_code == 0:
                     break
             final_snapshot = _repository_snapshot(
@@ -190,6 +251,8 @@ class RepairAgent:
                 steps=steps,
                 duration_seconds=time.monotonic() - started,
                 patch_lines=_changed_lines(original, final_snapshot),
+                usage=total_usage,
+                attempts=tuple(attempts),
                 failure_category=None
                 if status == "passed"
                 else _failure_category(test_result.output),
@@ -201,6 +264,8 @@ class RepairAgent:
                 steps=steps,
                 duration_seconds=time.monotonic() - started,
                 patch_lines=0,
+                usage=total_usage,
+                attempts=tuple(attempts),
                 failure_category="invalid_model_response",
                 error=str(exc),
             )
@@ -213,6 +278,8 @@ class RepairAgent:
                 steps=steps,
                 duration_seconds=time.monotonic() - started,
                 patch_lines=0,
+                usage=total_usage,
+                attempts=tuple(attempts),
                 failure_category="timeout" if timed_out else "runtime_error",
                 error=message[-1000:],
             )

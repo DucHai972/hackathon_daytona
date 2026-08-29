@@ -6,7 +6,12 @@ import urllib.error
 
 import pytest
 
-from darwin_debugger.provider import OpenAICompatibleProvider, PatchProposal, ProviderError
+from darwin_debugger.provider import (
+    OpenAICompatibleProvider,
+    PatchProposal,
+    ProviderError,
+    TokenUsage,
+)
 
 
 def test_patch_proposal_parses_fenced_json() -> None:
@@ -50,7 +55,10 @@ def test_provider_caps_completion_tokens(monkeypatch) -> None:
     def fake_urlopen(request, timeout):
         captured["body"] = json.loads(request.data)
         captured["timeout"] = timeout
-        return FakeResponse(b'{"choices":[{"message":{"content":"ok"}}]}')
+        return FakeResponse(
+            b'{"choices":[{"message":{"content":"ok"}}],'
+            b'"usage":{"prompt_tokens":12,"completion_tokens":3,"total_tokens":15}}'
+        )
 
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
     provider = OpenAICompatibleProvider(
@@ -60,9 +68,31 @@ def test_provider_caps_completion_tokens(monkeypatch) -> None:
         max_completion_tokens=2048,
     )
 
-    assert provider.complete(system="system", user="user") == "ok"
+    text, usage = provider.complete(system="system", user="user")
+    assert text == "ok"
+    assert usage == TokenUsage(prompt_tokens=12, completion_tokens=3, total_tokens=15)
     assert captured["body"]["max_completion_tokens"] == 2048
     assert captured["timeout"] == 12
+
+
+def test_provider_defaults_missing_usage_to_zero(monkeypatch) -> None:
+    class FakeResponse(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.close()
+
+    monkeypatch.setattr(
+        "urllib.request.urlopen",
+        lambda request, timeout: FakeResponse(b'{"choices":[{"message":{"content":"ok"}}]}'),
+    )
+
+    _, usage = OpenAICompatibleProvider(api_key="secret", model="model").complete(
+        system="system", user="user"
+    )
+
+    assert usage == TokenUsage()
 
 
 def test_provider_rejects_non_positive_completion_cap() -> None:
