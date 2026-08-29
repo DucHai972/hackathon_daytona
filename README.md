@@ -12,6 +12,8 @@ untouched held-out benchmark.
 
 Do not commit `.env`, API keys, generated sandbox contents, or live result artifacts.
 
+For sample, live-isolation, and real-results presentation paths, see [`DEMO_GUIDE.md`](DEMO_GUIDE.md).
+
 ## Setup
 
 ```bash
