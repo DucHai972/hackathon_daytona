@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Darwin Debugger</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --green: #3fb950; --red: #f85149; --amber: #d29922; --blue: #58a6ff;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  header {
+    padding: 20px 28px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 17px; letter-spacing: .02em; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  main { padding: 24px 28px 64px; max-width: 1180px; }
+  .banner {
+    background: #2d2410; border: 1px solid var(--amber); color: #f0d693;
+    padding: 10px 14px; border-radius: 6px; margin-bottom: 20px; font-size: 13px;
+  }
+  .issue { margin-bottom: 22px; }
+  .issue a { color: var(--blue); text-decoration: none; }
+  .issue a:hover { text-decoration: underline; }
+  .issue h2 { margin: 0 0 4px; font-size: 21px; font-weight: 600; }
+  .issue .meta { color: var(--muted); font-size: 13px; font-family: var(--mono); }
+  .pill {
+    display: inline-block; padding: 2px 9px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; font-family: var(--mono);
+  }
+  .pill.running { background: #10243e; color: var(--blue); }
+  .pill.passed  { background: #12261a; color: var(--green); }
+  .pill.failed, .pill.error { background: #2d1417; color: var(--red); }
+  .pill.unknown { background: #21262d; color: var(--muted); }
+
+  .timeline { display: flex; gap: 6px; flex-wrap: wrap; margin: 20px 0 26px; }
+  .step {
+    flex: 1 1 88px; padding: 9px 6px; border-radius: 6px; text-align: center;
+    font-family: var(--mono); font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: .05em; border: 1px solid var(--line);
+    background: var(--panel); color: var(--muted);
+  }
+  .step.done { border-color: #1f6f34; color: var(--green); }
+  .step.active {
+    border-color: var(--blue); color: var(--blue); background: #10243e;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .step.skipped { opacity: .35; }
+  @keyframes pulse { 50% { opacity: .55; } }
+  @media (prefers-reduced-motion: reduce) { .step.active { animation: none; } }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; }
+  .card h3 {
+    margin: 0 0 10px; font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--muted); font-weight: 600;
+  }
+  .big { font-size: 30px; font-weight: 600; font-family: var(--mono); line-height: 1.1; }
+  .card .detail { color: var(--muted); font-size: 12.5px; font-family: var(--mono); margin-top: 8px; }
+
+  .bar { display: flex; height: 9px; border-radius: 999px; overflow: hidden; background: #21262d; margin-top: 10px; }
+  .bar i { display: block; height: 100%; }
+  .bar .ok { background: var(--green); }
+  .bar .bad { background: var(--red); }
+  .bar .err { background: var(--amber); }
+
+  section { margin-top: 30px; }
+  section > h3 {
+    margin: 0 0 10px; font-size: 11.5px; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--muted); font-weight: 600;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; }
+  td.num { font-family: var(--mono); text-align: right; }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+  pre {
+    margin: 0; padding: 16px; font-family: var(--mono); font-size: 12.5px;
+    line-height: 1.55; overflow-x: auto; max-height: 420px;
+  }
+  pre .add { color: var(--green); }
+  pre .del { color: var(--red); }
+  pre .hunk { color: var(--blue); }
+  .events { font-family: var(--mono); font-size: 12.5px; max-height: 260px; overflow-y: auto; padding: 14px 16px; }
+  .events div { padding: 2px 0; color: var(--muted); }
+  .events b { color: var(--text); font-weight: 500; }
+  .pr a {
+    display: inline-block; margin-top: 4px; padding: 9px 16px; border-radius: 6px;
+    background: #1f6f34; color: #fff; text-decoration: none; font-weight: 600; font-size: 14px;
+  }
+  .pr .none { color: var(--muted); font-size: 13.5px; }
+  .empty { color: var(--muted); padding: 28px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>DARWIN DEBUGGER</h1>
+  <span class="sub">issue &rarr; sandbox &rarr; tests &rarr; pull request</span>
+  <span class="sub" id="conn" style="margin-left:auto"></span>
+</header>
+<main id="root"><p class="empty">Loading&hellip;</p></main>
+
+<script>
+"use strict";
+const root = document.getElementById("root");
+const conn = document.getElementById("conn");
+let runId = new URLSearchParams(location.search).get("run");
+let lastGood = null;
+
+const esc = (value) => String(value ?? "").replace(/[&<>"]/g,
+  (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const num = (value) => (Number(value) || 0).toLocaleString("en-US");
+
+async function pickRun() {
+  const response = await fetch("/api/runs", { cache: "no-store" });
+  const data = await response.json();
+  const runs = Array.isArray(data.runs) ? data.runs : [];
+  if (!runs.length) return null;
+  // Prefer a run still in flight; that is the one worth watching.
+  const live = runs.find((run) => run.status === "running");
+  return (live || runs[0]).run_id;
+}
+
+function testBar(tests) {
+  const total = Math.max(tests.total || 0, 1);
+  const pct = (n) => ((n || 0) / total * 100).toFixed(2) + "%";
+  return `<div class="bar">
+    <i class="ok"  style="width:${pct(tests.passed)}"></i>
+    <i class="bad" style="width:${pct(tests.failed)}"></i>
+    <i class="err" style="width:${pct(tests.errors)}"></i>
+  </div>`;
+}
+
+function diffHtml(diff) {
+  return esc(diff).split("\n").map((line) => {
+    if (line.startsWith("+++") || line.startsWith("---")) return line;
+    if (line.startsWith("+")) return `<span class="add">${line}</span>`;
+    if (line.startsWith("-")) return `<span class="del">${line}</span>`;
+    if (line.startsWith("@@")) return `<span class="hunk">${line}</span>`;
+    return line;
+  }).join("\n");
+}
+
+function render(run) {
+  const t = run.tokens || {}, tests = run.tests || {}, pr = run.pull_request || {};
+  const issue = run.issue || {};
+  const title = issue.url
+    ? `<a href="${esc(issue.url)}" target="_blank" rel="noopener">${esc(issue.title)}</a>`
+    : esc(issue.title);
+  const cost = run.cost_usd === null || run.cost_usd === undefined
+    ? "set MODEL_COST_PER_MTOK_IN/OUT for cost"
+    : "$" + Number(run.cost_usd).toFixed(4);
+
+  const attempts = (run.attempts || []).map((attempt, index) => {
+    const at = attempt.tokens || {}, ts = attempt.tests || {};
+    return `<tr>
+      <td class="num">${esc(attempt.n ?? index + 1)}</td>
+      <td class="num">${num(at.total ?? (at.prompt || 0) + (at.completion || 0))}</td>
+      <td class="num">${num(ts.passed)} / ${num(ts.total)}</td>
+      <td class="num">${num(ts.failed)}</td>
+      <td class="num">${(Number(attempt.duration_seconds) || 0).toFixed(1)}s</td>
+      <td>${esc(attempt.summary || "")}</td>
+    </tr>`;
+  }).join("");
+
+  root.innerHTML = `
+    ${run.note ? `<div class="banner">${esc(run.note)}</div>` : ""}
+    <div class="issue">
+      <h2>${title}</h2>
+      <div class="meta">
+        ${esc(issue.repo)}#${esc(issue.number ?? "?")} &middot;
+        <span class="pill ${esc(run.status)}">${esc(run.status)}</span> &middot;
+        ${esc(run.model)} &middot; strategy ${esc(run.strategy_id)}
+      </div>
+    </div>
+
+    <div class="timeline">
+      ${(run.steps || []).map((s) => `<div class="step ${esc(s.state)}">${esc(s.phase)}</div>`).join("")}
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <h3>Tokens consumed</h3>
+        <div class="big">${num(t.total)}</div>
+        <div class="detail">
+          ${num(t.prompt)} in &middot; ${num(t.completion)} out &middot; ${num(t.calls)} calls<br>${esc(cost)}
+          ${t.derived ? "<br>summed from attempts" : ""}
+        </div>
+      </div>
+      <div class="card">
+        <h3>Tests</h3>
+        <div class="big">${num(tests.passed)} / ${num(tests.total)}</div>
+        ${testBar(tests)}
+        <div class="detail">
+          ${num(tests.failed)} failed &middot; ${num(tests.errors)} errors<br>
+          ${esc(tests.command || "no test command recorded")}
+        </div>
+      </div>
+      <div class="card">
+        <h3>Patch</h3>
+        <div class="big">${num((run.patch || {}).lines_changed)}</div>
+        <div class="detail">
+          lines changed in ${((run.patch || {}).files || []).length} file(s)<br>
+          ${esc((((run.patch || {}).files) || []).join(", ") || "no files changed yet")}
+        </div>
+      </div>
+      <div class="card pr">
+        <h3>Pull request</h3>
+        ${pr.url
+          ? `<a href="${esc(pr.url)}" target="_blank" rel="noopener">Open pull request</a>`
+          : `<div class="big" style="font-size:19px">${esc(pr.state)}</div>`}
+        <div class="detail">branch ${esc(pr.branch || "not created")}</div>
+      </div>
+    </div>
+
+    ${attempts ? `<section><h3>Repair attempts</h3><div class="scroll"><table>
+      <tr><th>#</th><th>Tokens</th><th>Passed</th><th>Failed</th><th>Time</th><th>What it tried</th></tr>
+      ${attempts}</table></div></section>` : ""}
+
+    ${(run.patch || {}).diff ? `<section><h3>Diff</h3>
+      <div class="scroll"><pre>${diffHtml(run.patch.diff)}</pre></div></section>` : ""}
+
+    ${(run.events || []).length ? `<section><h3>Activity</h3><div class="scroll events">
+      ${run.events.map((e) => `<div>${esc((e.at || "").slice(11, 19))}
+        <b>${esc(e.phase)}</b> ${esc(e.message)}</div>`).reverse().join("")}
+    </div></section>` : ""}
+
+    <section><h3>Run</h3><div class="scroll"><table>
+      <tr><th>Run id</th><td>${esc(run.run_id)}</td></tr>
+      <tr><th>Sandbox</th><td>${esc(run.sandbox_id)}</td></tr>
+      <tr><th>Started</th><td>${esc(run.started_at || "-")}</td></tr>
+      <tr><th>Finished</th><td>${esc(run.finished_at || "still running")}</td></tr>
+    </table></div></section>
+  `;
+}
+
+async function tick() {
+  try {
+    if (!runId) runId = await pickRun();
+    if (!runId) {
+      conn.textContent = "waiting for a run";
+      if (!lastGood) root.innerHTML =
+        `<p class="empty">No run journal yet. Start one with
+         <code>darwin-debugger fix --repo owner/name --issue 42</code>,
+         or replay a recorded run with
+         <code>python dashboard/server.py --replay dashboard/sample_run.json</code>.</p>`;
+      return;
+    }
+    const response = await fetch(`/api/runs/${encodeURIComponent(runId)}`, { cache: "no-store" });
+    if (!response.ok) { runId = null; return; }
+    const run = await response.json();
+    lastGood = run;
+    render(run);
+    conn.textContent = run.status === "running"
+      ? "live · " + run.phase
+      : "finished · " + run.status;
+  } catch (error) {
+    // A torn read or a restarted server must not blank the screen mid-demo:
+    // keep the last good render and try again next tick.
+    conn.textContent = "reconnecting…";
+  }
+}
+
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
